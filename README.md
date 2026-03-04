@@ -1,7 +1,3 @@
-# PipeWire AudioForge
-
-Advanced PipeWire configuration for professional audio filtering with HeSuVi 5.1 spatial audio and 10-band equalizer.
-
 ## Overview
 
 This project provides automated installation and configuration of PipeWire with multiple audio profiles:
