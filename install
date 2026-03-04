@@ -50,12 +50,35 @@ case "$1" in
         # Adjust HeSuVi file path with current username (BEFORE target.object)
         sed -i "s|hesuvi.wav|/home/$current_user/.config/pipewire/hesuvi/hesuvi.wav|g" ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
         
-        # Get target.object and set it
-        target_object=$(wpctl inspect $(wpctl status | grep 'Speaker + Headphones' | awk '{print $3}' | cut -d. -f 1) | grep 'output' | awk '{print $4}' | tr -d '"')
+        # Get target.object and validate it
+        target_object=$(wpctl status | grep '0. Audio/Sink' | awk '{print $3}')
+        
+        # Check if target_object is empty or contains filter configuration names
+        if [ -z "$target_object" ]; then
+            echo "✗ Error: Could not detect audio sink"
+            echo "Please manually determine the sink name:"
+            echo "  1) wpctl status"
+            echo "  2) wpctl inspect <ID>"
+            echo "  3) Look for 'node.name' with 'alsa_output'"
+            echo "Then edit the configuration files and set 'target.object' manually."
+            exit 1
+        fi
+        
+        if [ "$target_object" = "effect_input.hesuvi_5.1" ] || [ "$target_object" = "effect_input.eq6" ]; then
+            echo "✗ Error: Detected PipeWire filter configuration instead of actual audio sink"
+            echo "This suggests PipeWire filters are already loaded or misconfigured."
+            echo ""
+            echo "To fix this:"
+            echo "  1) Check existing configurations: ls ~/.config/pipewire/pipewire.conf.d/"
+            echo "  2) Run 'wpctl status' and look for the actual hardware sink (alsa_output...)"
+            echo "  3) If unsure, restart PipeWire: systemctl --user restart pipewire"
+            echo "  4) Then run this script again"
+            exit 1
+        fi
+        
         sed -i "s|target\.object = .*|target.object = \"$target_object\"|" ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
         sed -i "s|target\.object = .*|target.object = \"$target_object\"|" ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
-        wpctl set-default $(wpctl status | grep 'Speaker + Headphones' | awk '{print $3}' | cut -d. -f 1)
-        
+
         echo "✓ Files installed"
         echo "✓ HeSuVi paths adjusted for user: $current_user"
         echo "✓ target.object updated: $target_object"
