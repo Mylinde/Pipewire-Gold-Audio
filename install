@@ -1,0 +1,94 @@
+#!/bin/bash
+
+set -e  # Exit script on error
+
+# Pick sudo or doas. Override with OVERRIDE_ELEVATION=sudo|doas
+choose_elev() {
+  if [ "${OVERRIDE_ELEVATION:-}" = "sudo" ]; then
+    echo "sudo"; return
+  elif [ "${OVERRIDE_ELEVATION:-}" = "doas" ]; then
+    echo "doas"; return
+  fi
+  if command -v doas >/dev/null 2>&1; then
+    echo "doas"
+  elif command -v sudo >/dev/null 2>&1; then
+    echo "sudo"
+  else
+    echo "Error: Neither sudo nor doas found in PATH." >&2
+    exit 1
+  fi
+}
+
+# Choose elevation on demand (OVERRIDE_ELEVATION can change at runtime)
+get_elev() { choose_elev; }
+
+ELEV="$(get_elev)"
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 [user|uninstall]"
+    echo "  user      - Installation for current user"
+    echo "  uninstall - Uninstallation"
+    exit 1
+fi
+
+case "$1" in
+    user)
+        echo "=== PipeWire Installation for User ==="
+        
+        # Create directories
+        mkdir -p ~/.config/pipewire/hesuvi
+        mkdir -p ~/.config/pipewire/pipewire.conf.d
+        
+        # Install files
+        echo "Installing files to ~/.config/pipewire/"
+        install -D ./hesuvi/* ~/.config/pipewire/hesuvi/
+        install -D ./pipewire.conf.d/* ~/.config/pipewire/pipewire.conf.d/
+        
+        # Get current username
+        current_user=$USER
+        
+        # Adjust HeSuVi file path with current username (BEFORE target.object)
+        sed -i "s|hesuvi.wav|/home/$current_user/.config/pipewire/hesuvi/hesuvi.wav|g" ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
+        
+        # Get target.object and set it
+        target_object=$(wpctl inspect $(wpctl status | grep 'Speaker + Headphones' | awk '{print $3}' | cut -d. -f 1) | grep 'output' | awk '{print $4}' | tr -d '"')
+        sed -i "s|target\.object = .*|target.object = \"$target_object\"|" ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
+        sed -i "s|target\.object = .*|target.object = \"$target_object\"|" ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
+        wpctl set-default $(wpctl status | grep 'Speaker + Headphones' | awk '{print $3}' | cut -d. -f 1)
+        
+        echo "✓ Files installed"
+        echo "✓ HeSuVi paths adjusted for user: $current_user"
+        echo "✓ target.object updated: $target_object"
+        
+        # Add user to pipewire group
+        if getent group pipewire > /dev/null; then
+            echo "Adding user to 'pipewire' group..."
+            "$ELEV" usermod -a -G pipewire $USER
+            echo "⚠ Please log out and log back in for group changes to take effect"
+        else
+            echo "⚠ Group 'pipewire' does not exist"
+        fi
+        echo "✓ Installation completed"
+        ;;
+    
+    uninstall)
+        echo "=== PipeWire Uninstallation ==="
+        
+        # Remove user installation
+        if [ -d ~/.config/pipewire ]; then
+            echo "Removing user configuration..."
+            rm -rf ~/.config/pipewire/hesuvi
+            rm -f ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
+            rm -f ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
+            "$ELEV" usermod -r -G pipewire $USER
+            echo "✓ User configuration removed"
+        fi
+        echo "✓ Uninstallation completed"
+        ;;    
+    *)
+        echo "Usage: $0 [user|uninstall]"
+        echo "  user      - Installation for current user"
+        echo "  uninstall - Uninstallation"
+        exit 1
+        ;;
+esac
