@@ -1,6 +1,6 @@
 ## Overview
 
-This project provides automated installation and configuration of PipeWire with multiple audio profiles:
+This project provides automated installation and configuration of PipeWire with multiple audio profiles.
 
 ### Available Profiles
 
