@@ -14,12 +14,15 @@ This project provides automated installation and configuration of PipeWire with 
    - Stereo processing (FL, FR)
    - Optimized for standard stereo playback
    - Stereo widening (Widen effect)
+   - Soft-Limiter protection against clipping
 
 ### Common Features
 
 - **Real-Time (RT) Priority** for low audio latency
 - **Automatic Soundcard Detection** and audio sink configuration
 - **User-Level Installation** in `~/.config/pipewire/`
+- **De-Esser** to reduce sibilance (S/Sh sounds)
+- **Soft-Limiter** to prevent digital clipping
 
 ## Requirements
 
@@ -61,6 +64,7 @@ Removes all installed files from user configuration.
 ├── README.md                        # This file
 ├── LICENSE                          # MIT License
 ├── pipewire.conf.d/
+│   ├── pipewire.conf               # Main PipeWire configuration
 │   ├── sink-eq10-5.1.conf          # HeSuVi 5.1 filter configuration
 │   └── sink-eq10-wide.conf         # Standard EQ stereo configuration
 └── hesuvi/
@@ -74,7 +78,7 @@ Removes all installed files from user configuration.
 Specialized configuration for spatial audio:
 
 - **Input**: 5.1 Surround-Sound (FL, FR, FC, LFE, SL, SR)
-- **Processing**: HeSuVi HRTF filter
+- **Processing**: HeSuVi HRTF filter with 10-band EQ per channel
 - **Output**: Stereo (FL, FR) with spatial impression
 - **Use Case**: Movies, TV series, immersive games
 
@@ -89,15 +93,23 @@ Graphic 10-band equalizer for everyday music:
 4. Warmth (400 Hz, +3dB) - warmth and proximity
 5. Anti-Boxy (600 Hz, -1.5dB) - reduces papery sound
 6. Anti-Nasal (1000 Hz, -2dB) - reduces nasal tone
-7. Midrange Clarity (1500 Hz, -2dB) - clarity
-8. Anti-Plastic (2000 Hz, -3dB) - natural sound
+7. Midrange Clarity (1500 Hz, -2dB) - clarity and separation
+8. Anti-Plastic (2000 Hz, -3dB) - natural, organic sound
 9. Presence (4500 Hz, +1.5dB) - speech intelligibility
-10. Brilliance (9000 Hz, +2dB) - detail richness
-11. Air (12000 Hz, +2dB) - silkiness
+10. Brilliance (9000 Hz, +2dB) - detail and sparkle
+11. Air (12000 Hz, +2dB) - silkiness and extension
 
 **Additional Features:**
-- Stereo widening (Widen: 0.35) - wider stereo impression
-- Final gain (1.15 = ~+1.2dB) - optimized level
+
+- **De-Esser** (6 kHz, -1.5dB) - reduces sibilance from S/Sh sounds
+- **Soft-Limiter** (High-Shelf, 10 kHz, -1dB) - prevents digital clipping
+- **Stereo widening** (0.35) - wider stereo impression
+- **Final gain** (1.0 = unity gain) - no additional boost to prevent clipping
+
+**Signal Flow:**
+```
+Input → High-Pass → EQ Bands (1-11) → De-Esser → Final Gain → Soft-Limiter → Output
+```
 
 #### Gain Calculation
 
@@ -132,12 +144,12 @@ If automatic detection doesn't work:
 
 2. **Get sink name:**
    ```bash
-   wpctl inspect <ID> | grep 'output' | awk '{print $4}' | tr -d '"'
+   wpctl inspect <ID> | grep 'node.name' | awk '{print $4}' | tr -d '"'
    ```
 
 3. **Manually enter in configuration:**
    ```ini
-   target.object = "Sink-Name"
+   target.object = "alsa_output.pci-0000_03_00.6.HiFi__hw_Generic_1__sink"
    ```
 
 ## Real-Time Priority
@@ -179,9 +191,8 @@ Choose the sink based on use case:
 # Display all available sinks
 wpctl status
 
-# Set a sink as default
-wpctl set-default <sink-id>
-```
+# Inspect sink details
+wpctl inspect <sink-id>```
 
 ## Troubleshooting
 
@@ -193,6 +204,9 @@ systemctl --user restart pipewire
 
 # Check logs
 journalctl --user -u pipewire -f
+
+# Check filter chain status
+wpctl inspect <sink-id>
 ```
 
 ### Audio Not Working
@@ -201,8 +215,8 @@ journalctl --user -u pipewire -f
 # Check available sinks
 wpctl status
 
-# Inspect sink details
-wpctl inspect <sink-id>
+# Verify target.object is correct
+grep "target.object" ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
 
 # Set default sink
 wpctl set-default <sink-id>
@@ -221,6 +235,15 @@ ulimit -r
 systemctl --user restart pipewire
 ```
 
+### Clipping/Distortion
+
+```
+If audio sounds distorted or clips:
+1. Reduce EQ gains (especially bands 1-3)
+2. Verify soft-limiter is enabled at 10 kHz, -1dB
+3. Check playback volume in system settings
+```
+
 ## Customizing EQ Settings
 
 EQ bands can be adjusted in `sink-eq10-wide.conf`:
@@ -231,12 +254,22 @@ EQ bands can be adjusted in `sink-eq10-wide.conf`:
 ```
 
 - **Freq**: Center frequency in Hz
-- **Q**: Quality factor (higher = narrower)
-- **Gain**: Boost in dB (negative = cut)
+- **Q**: Quality factor (higher = narrower bandwidth)
+- **Gain**: Boost/Cut in dB (positive = boost, negative = cut)
+
+### Soft-Limiter Adjustment
+
+To increase limiter threshold:
+```ini
+{ type = "builtin" name = "soft_limiter" label = "bq_highshelf" 
+  control = { Freq = 10000.0 Q = 0.7 Gain = -0.5 } }  # Less aggressive
+```
 
 ## Known Limitations
 
 - **User-level installation only**: System-wide installation can cause audio playback issues when switching the default device
+- **No hardware compressor/limiter**: PipeWire filter-chain does not include native compressor or hard-limiter. Soft-limiter is approximated with high-shelf EQ.
+- **Single target device**: Each configuration targets one audio sink. For multiple devices, create separate configurations.
 
 ## License
 
