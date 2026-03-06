@@ -1,3 +1,7 @@
+# PipeWire Audio Configuration
+
+This project provides automated installation and configuration of PipeWire with multiple audio profiles including spatial audio (HeSuVi 5.1).
+
 ## Overview
 
 This project provides automated installation and configuration of PipeWire with multiple audio profiles.
@@ -8,6 +12,7 @@ This project provides automated installation and configuration of PipeWire with 
    - 5.1 Surround-Sound processing (FL, FR, FC, LFE, SL, SR)
    - HeSuVi HRTF filter for spatial audio
    - Conversion to stereo output
+   - 10-band EQ per channel
 
 2. **Standard EQ** (`sink-eq10-wide.conf`)
    - 10-Band Graphic Equalizer
@@ -39,14 +44,33 @@ This project provides automated installation and configuration of PipeWire with 
 ### User-Level Installation (supported method)
 
 ```bash
+chmod +x ./install
 ./install user
 ```
 
-This creates the configuration in `~/.config/pipewire/` and:
-- Automatically detects the current username
-- Detects the soundcard and its sink ID
-- Adjusts file paths (HeSuVi, EQ)
-- Adds the user to the `pipewire` group (for RT priority)
+The script will:
+- Create directories in `~/.config/pipewire/`
+- Detect your current username
+- Detect the soundcard and its sink ID automatically
+- Adjust file paths (HeSuVi, EQ filters)
+- Add you to the `pipewire` group (for RT priority)
+- Create automatic backups if configurations already exist
+
+#### Installation Flow
+
+```
+Check pipewire.conf exists?
+├─ YES → Ask if override
+│  ├─ YES → Install new pipewire.conf
+│  └─ NO  → Keep existing
+└─ NO  → Install pipewire.conf
+
+Install filter configurations (always)
+Install HeSuVi files (always)
+Detect audio sink (wpctl)
+Set target.object in configs
+Add user to pipewire group
+```
 
 ### Uninstallation
 
@@ -54,7 +78,13 @@ This creates the configuration in `~/.config/pipewire/` and:
 ./install uninstall
 ```
 
-Removes all installed files from user configuration.
+The script will:
+- Remove HeSuVi files
+- Remove filter configurations (sink-eq10-5.1.conf, sink-eq10-wide.conf)
+- **Ask if pipewire.conf should be removed**
+  - YES → Delete pipewire.conf
+  - NO → Keep pipewire.conf (preserves manual edits)
+- Remove user from `pipewire` group
 
 ## Directory Structure
 
@@ -105,6 +135,7 @@ Graphic 10-band equalizer for everyday music:
 - **Soft-Limiter** (High-Shelf, 10 kHz, -1dB) - prevents digital clipping
 - **Stereo widening** (0.35) - wider stereo impression
 - **Final gain** (1.0 = unity gain) - no additional boost to prevent clipping
+- **CPU Impact**: Low (11 EQ bands only)
 
 **Signal Flow:**
 ```
@@ -127,12 +158,15 @@ Factor = 10^(dB / 20)
 The installation script automatically adjusts the following values:
 
 ```ini
-target.object = "Sink-Name"
+target.object = "sink-name"      # Your audio sink
 ```
 
-File paths are set to the user's installation directory.
+File paths are set to the user's installation directory:
+```
+~/.config/pipewire/hesuvi/hesuvi.wav
+```
 
-## Soundcard Detection
+### Manual Soundcard Detection
 
 If automatic detection doesn't work:
 
@@ -147,7 +181,12 @@ If automatic detection doesn't work:
    wpctl inspect <ID> | grep 'node.name' | awk '{print $4}' | tr -d '"'
    ```
 
-3. **Manually enter in configuration:**
+3. **Manually edit configuration:**
+   ```bash
+   editor ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
+   ```
+   
+   Find and update:
    ```ini
    target.object = "alsa_output.pci-0000_03_00.6.HiFi__hw_Generic_1__sink"
    ```
@@ -166,48 +205,39 @@ cat /etc/security/limits.d/25-pw-rlimits.conf
 ps -mo pid,tid,rtprio,comm -C pipewire
 ```
 
-### Add User to pipewire Group
+The installation script automatically adds you to the `pipewire` group. After login, RT priority should be enabled.
 
-```bash
-sudo usermod -a -G pipewire $USER
-```
-
-**Important**: Log out and log back in for the change to take effect!
+**Important**: Log out and log back in for group changes to take effect!
 
 ## Usage
 
-After installation, new audio sinks will be created:
+After installation and restart, new audio sinks will be created automatically.
 
 ### Available Sinks
 
 - **Pipewire Gold (5.1) Audio** - HeSuVi 5.1 for spatial audio
 - **Pipewire Gold Standard Audio** - 10-Band EQ for standard stereo
 
-Choose the sink based on use case:
-- Movies/Gaming → HeSuVi 5.1
-- Music/Daily use → Standard EQ
+### Commands
 
 ```bash
-# Display all available sinks
+# List all available sinks
 wpctl status
 
-# Inspect sink details
-wpctl inspect <sink-id>```
+# Set default sink
+wpctl set-default <sink-id>
 
-## Troubleshooting
+# Inspect sink details (see active filters)
+wpctl inspect <sink-id>
 
-### Filter Not Loading
-
-```bash
-# Restart PipeWire
+# Restart PipeWire after configuration changes
 systemctl --user restart pipewire
 
-# Check logs
+# View logs
 journalctl --user -u pipewire -f
-
-# Check filter chain status
-wpctl inspect <sink-id>
 ```
+
+## Troubleshooting
 
 ### Audio Not Working
 
@@ -215,12 +245,44 @@ wpctl inspect <sink-id>
 # Check available sinks
 wpctl status
 
+# Verify sink is active
+wpctl inspect <sink-id>
+
+# Set the sink as default
+wpctl set-default <sink-id>
+
+# Restart PipeWire
+systemctl --user restart pipewire
+```
+
+### Filter Not Loading
+
+```bash
+# Restart PipeWire (required after config changes)
+systemctl --user restart pipewire
+
+# Check logs for errors
+journalctl --user -u pipewire -f
+
 # Verify target.object is correct
 grep "target.object" ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
 
-# Set default sink
-wpctl set-default <sink-id>
+# Check sink name manually
+wpctl inspect <sink-id> | grep 'node.name'
 ```
+
+### Audio Crackles/Pops
+
+This indicates CPU overload. Solutions:
+1. Disable HeSuVi 5.1 (high CPU cost)
+2. Increase quantum size in pipewire.conf:
+   ```ini
+   default.clock.quantum = 2048
+   ```
+3. Check CPU usage:
+   ```bash
+   top -p $(pgrep pipewire)
+   ```
 
 ### RT Priority Not Taking Effect
 
@@ -228,21 +290,27 @@ wpctl set-default <sink-id>
 # Check user group membership
 groups $USER
 
+# Expected output should include: pipewire
+
 # Check limits
 ulimit -r
 
+# Should show: unlimited
+
 # Restart PipeWire
 systemctl --user restart pipewire
+
+# Verify RT priority
+ps -mo pid,tid,rtprio,comm -C pipewire
 ```
 
 ### Clipping/Distortion
 
-```
 If audio sounds distorted or clips:
 1. Reduce EQ gains (especially bands 1-3)
 2. Verify soft-limiter is enabled at 10 kHz, -1dB
 3. Check playback volume in system settings
-```
+4. Reduce overall gain if needed
 
 ## Customizing EQ Settings
 
@@ -254,22 +322,35 @@ EQ bands can be adjusted in `sink-eq10-wide.conf`:
 ```
 
 - **Freq**: Center frequency in Hz
-- **Q**: Quality factor (higher = narrower bandwidth)
+- **Q**: Quality factor (higher = narrower bandwidth, more precise)
 - **Gain**: Boost/Cut in dB (positive = boost, negative = cut)
 
 ### Soft-Limiter Adjustment
 
-To increase limiter threshold:
+To make limiter less aggressive:
 ```ini
 { type = "builtin" name = "soft_limiter" label = "bq_highshelf" 
-  control = { Freq = 10000.0 Q = 0.7 Gain = -0.5 } }  # Less aggressive
+  control = { Freq = 10000.0 Q = 0.7 Gain = -0.5 } }
+```
+
+To make limiter more aggressive:
+```ini
+{ type = "builtin" name = "soft_limiter" label = "bq_highshelf" 
+  control = { Freq = 10000.0 Q = 0.7 Gain = -2.0 } }
+```
+
+After any changes:
+```bash
+systemctl --user restart pipewire
 ```
 
 ## Known Limitations
 
 - **User-level installation only**: System-wide installation can cause audio playback issues when switching the default device
-- **No hardware compressor/limiter**: PipeWire filter-chain does not include native compressor or hard-limiter. Soft-limiter is approximated with high-shelf EQ.
-- **Single target device**: Each configuration targets one audio sink. For multiple devices, create separate configurations.
+- **No hardware compressor**: PipeWire filter-chain does not include native compressor. Use soft-limiter or reduce EQ gains instead.
+- **Single target device**: Each configuration targets one audio sink. For multiple devices, manually create separate configurations.
+- **HeSuVi 5.1 CPU intensive**: Convolver + 20 EQ bands require significant CPU. Use Standard EQ for lower-end systems.
+- **No real-time parameter control**: EQ settings require PipeWire restart after changes.
 
 ## License
 
