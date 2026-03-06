@@ -39,10 +39,28 @@ case "$1" in
         mkdir -p ~/.config/pipewire/hesuvi
         mkdir -p ~/.config/pipewire/pipewire.conf.d
         
-        # Install files
-        echo "Installing files to ~/.config/pipewire/"
+        # Check if pipewire.conf already exists
+        if [ -f ~/.config/pipewire/pipewire.conf ]; then
+            echo "⚠ Found existing pipewire.conf in ~/.config/pipewire/"
+            read -r -p "Should it be overwritten? [y/N] " response
+            if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+                echo "Installing pipewire.conf..."
+                install -D ./pipewire.conf.d/pipewire.conf ~/.config/pipewire/
+            else
+                echo "Keeping existing pipewire.conf"
+            fi
+        else
+            echo "Installing pipewire.conf..."
+            install -D ./pipewire.conf.d/pipewire.conf ~/.config/pipewire/
+        fi
+        
+        # Always install filter configurations and HeSuVi files
+        echo "Installing filter configurations..."
+        install -D ./pipewire.conf.d/sink-eq10-5.1.conf ~/.config/pipewire/pipewire.conf.d/
+        install -D ./pipewire.conf.d/sink-eq10-wide.conf ~/.config/pipewire/pipewire.conf.d/
+        
+        echo "Installing HeSuVi files..."
         install -D ./hesuvi/* ~/.config/pipewire/hesuvi/
-        install -D ./pipewire.conf.d/* ~/.config/pipewire/pipewire.conf.d/
         
         # Get current username
         current_user=$USER
@@ -103,11 +121,25 @@ case "$1" in
             rm -rf ~/.config/pipewire/hesuvi
             rm -f ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
             rm -f ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
-            "$ELEV" usermod -r -G pipewire $USER
-            echo "✓ User configuration removed"
+            echo "✓ Filter configurations removed"
+            
+            # Check if pipewire.conf exists and ask before removing
+            if [ -f ~/.config/pipewire/pipewire.conf ]; then
+                echo "⚠ The pipewire.conf in ~/.config/pipewire/"
+                read -r -p "Should it be removed? [y/N] " response
+                if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+                    rm -f ~/.config/pipewire/pipewire.conf
+                    echo "✓ pipewire.conf removed"
+                else
+                    echo "Keeping pipewire.conf"
+                fi
+            fi
+            
+            "$ELEV" usermod -r -G pipewire $USER 2>/dev/null || true
+            echo "✓ User removed from 'pipewire' group"
         fi
         echo "✓ Uninstallation completed"
-        ;;    
+        ;;
     *)
         echo "Usage: $0 [user|uninstall]"
         echo "  user      - Installation for current user"
