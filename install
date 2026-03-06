@@ -40,18 +40,18 @@ case "$1" in
         mkdir -p ~/.config/pipewire/pipewire.conf.d
         
         # Check if pipewire.conf already exists
-        if [ -f ~/.config/pipewire/pipewire.conf ]; then
-            echo "⚠ Found existing pipewire.conf in ~/.config/pipewire/"
+        if [ -f ~/.config/pipewire/pipewire.conf.d/pipewire.conf ]; then
+            echo "⚠ Found existing pipewire.conf in ~/.config/pipewire/pipewire.conf.d/"
             read -r -p "Should it be overwritten? [y/N] " response
             if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
                 echo "Installing pipewire.conf..."
-                install -D ./pipewire.conf.d/pipewire.conf ~/.config/pipewire/
+                install -D ./pipewire.conf.d/pipewire.conf ~/.config/pipewire/pipewire.conf.d/
             else
                 echo "Keeping existing pipewire.conf"
             fi
         else
             echo "Installing pipewire.conf..."
-            install -D ./pipewire.conf.d/pipewire.conf ~/.config/pipewire/
+            install -D ./pipewire.conf.d/pipewire.conf ~/.config/pipewire/pipewire.conf.d/
         fi
         
         # Always install filter configurations and HeSuVi files
@@ -124,17 +124,17 @@ case "$1" in
             echo "✓ Filter configurations removed"
             
             # Check if pipewire.conf exists and ask before removing
-            if [ -f ~/.config/pipewire/pipewire.conf ]; then
-                echo "⚠ The pipewire.conf in ~/.config/pipewire/"
+            if [ -f ~/.config/pipewire/pipewire.conf.d/pipewire.conf ]; then
+                echo "⚠ The pipewire.conf in ~/.config/pipewire/pipewire.conf.d/"
                 read -r -p "Should it be removed? [y/N] " response
                 if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-                    rm -f ~/.config/pipewire/pipewire.conf
+                    rm -f ~/.config/pipewire/pipewire.conf.d/pipewire.conf
                     echo "✓ pipewire.conf removed"
                 else
                     echo "Keeping pipewire.conf"
                 fi
             fi
-            
+            echo "⚠ Removing user from 'pipewire' group..."
             "$ELEV" usermod -r -G pipewire $USER 2>/dev/null || true
             echo "✓ User removed from 'pipewire' group"
         fi
