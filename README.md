@@ -2,6 +2,15 @@
 
 This project provides automated installation and configuration of PipeWire with multiple audio profiles including spatial audio (HeSuVi 5.1).
 
+## ⚠️ Device-Specific Presets
+
+These audio profiles are **made for the ASUS Vivobook Go E1504FA** with its built-in speakers.
+
+**The presets feature:**
+- Bass cut-off at 65 Hz (suitable for small notebook speakers)
+- EQ tuned to compensate for laptop speaker limitations
+- Soft-limiter to prevent distortion on small drivers
+
 ## Overview
 
 This project provides automated installation and configuration of PipeWire with multiple audio profiles.
