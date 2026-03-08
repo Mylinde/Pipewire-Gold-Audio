@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PipeWire EQ Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 0.95em;
+        }
+
+        .eq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .eq-band {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid #e9ecef;
+        }
+
+        .eq-band:hover {
+            background: #e7f3ff;
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .band-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .band-freq {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+        }
+
+        .slider-container {
+            margin-bottom: 15px;
+        }
+
+        .slider-label {
+            font-size: 0.8em;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 5px;
+            margin-top: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+        }
+
+        .value-display {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 1.1em;
+            min-width: 50px;
+            margin-top: 5px;
+        }
+
+        .band-range {
+            font-size: 0.8em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ee5a52;
+            transform: translateY(-2px);
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            display: block;
+        }
+
+        .preset-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .preset-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-preset {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-preset:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            color: #333;
+            font-size: 0.95em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .eq-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 PipeWire EQ Editor</h1>
+        <p class="subtitle">Passe deine Audio-Einstellungen in Echtzeit an</p>
+
+        <div class="info-box">
+            💡 <strong>Hinweis:</strong> Änderungen werden sofort gespeichert und PipeWire wird neu gestartet.
+        </div>
+
+        <div class="preset-section">
+            <h3>📋 Presets</h3>
+            <div class="preset-buttons">
+                <button class="btn-preset" onclick="resetPreset()">↺ Zurücksetzen</button>
+                <button class="btn-preset" onclick="loadPreset('music')">🎵 Musik</button>
+                <button class="btn-preset" onclick="loadPreset('podcast')">🎙️ Podcast</button>
+                <button class="btn-preset" onclick="loadPreset('bright')">✨ Hell</button>
+                <button class="btn-preset" onclick="loadPreset('warm')">🔥 Warm</button>
+            </div>
+        </div>
+
+        <div id="loadingSpinner" class="loading">
+            <div class="spinner"></div>
+            Lade aktuelle Konfiguration...
+        </div>
+
+        <div class="eq-grid" id="eqGrid" style="display: none;"></div>
+
+        <div class="controls" id="controlsSection" style="display: none;">
+            <button class="btn-primary" onclick="applyChanges()">✓ Änderungen speichern</button>
+            <button class="btn-secondary" onclick="resetAll()">↺ Alle zurücksetzen</button>
+            <button class="btn-danger" onclick="restorePipeWire()">🔄 PipeWire neu starten</button>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <script>
+        const bands = [
+            { id: 'band_1', label: 'Bass Boost', freq: '120 Hz', gainMin: 0, gainMax: 10, qMin: 0.1, qMax: 5 },
+            { id: 'band_2', label: 'Foundation', freq: '200 Hz', gainMin: 0, gainMax: 10, qMin: 0.1, qMax: 5 },
+            { id: 'band_3', label: 'Warmth', freq: '400 Hz', gainMin: 0, gainMax: 10, qMin: 0.1, qMax: 5 },
+            { id: 'band_4', label: 'Anti-Boxy', freq: '600 Hz', gainMin: -5, gainMax: 0, qMin: 0.1, qMax: 5 },
+            { id: 'band_5', label: 'Anti-Nasal', freq: '1000 Hz', gainMin: -5, gainMax: 0, qMin: 0.1, qMax: 5 },
+            { id: 'band_6', label: 'Midrange', freq: '1500 Hz', gainMin: -5, gainMax: 0, qMin: 0.1, qMax: 5 },
+            { id: 'band_7', label: 'Anti-Plastic', freq: '2000 Hz', gainMin: -5, gainMax: 0, qMin: 0.1, qMax: 5 },
+            { id: 'band_8', label: 'Presence', freq: '4500 Hz', gainMin: 0, gainMax: 5, qMin: 0.1, qMax: 5 },
+            { id: 'band_9', label: 'Brilliance', freq: '9000 Hz', gainMin: 0, gainMax: 5, qMin: 0.1, qMax: 5 },
+            { id: 'band_10', label: 'Air', freq: '12000 Hz', gainMin: 0, gainMax: 5, qMin: 0.1, qMax: 5 }
+        ];
+
+        const originalGains = {};
+        let currentGains = {};
+
+        async function initializeEQ() {
+            console.log("🎵 Initialisiere EQ Editor...");
+            
+            try {
+                const response = await fetch('/api/gains');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+                
+                currentGains = await response.json();
+                console.log("✓ Gains vom Server geladen:", currentGains);
+                
+                Object.assign(originalGains, currentGains);
+                
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('eqGrid').style.display = 'grid';
+                document.getElementById('controlsSection').style.display = 'flex';
+                
+                renderEQ();
+                
+                showStatus('✓ Konfiguration erfolgreich geladen!', 'success');
+                
+            } catch (error) {
+                console.error("✗ Fehler beim Laden:", error);
+                showStatus(`✗ Fehler beim Laden der Konfiguration: ${error.message}`, 'error');
+                
+                console.log("⚠ Verwende Default-Werte...");
+                bands.forEach(band => {
+                    currentGains[`${band.id}`] = 0;
+                    currentGains[`${band.id}_q`] = 1.0;
+                });
+                Object.assign(originalGains, currentGains);
+                
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('eqGrid').style.display = 'grid';
+                document.getElementById('controlsSection').style.display = 'flex';
+                
+                renderEQ();
+            }
+        }
+
+        function renderEQ() {
+            console.log("🎨 Rendere EQ mit Gains:", currentGains);
+            
+            const grid = document.getElementById('eqGrid');
+            grid.innerHTML = '';
+
+            bands.forEach(band => {
+                const gainValue = currentGains[band.id] || 0;
+                const qValue = currentGains[`${band.id}_q`] || 1.0;
+                
+                const bandHtml = `
+                    <div class="eq-band">
+                        <div class="band-label">${band.label}</div>
+                        <div class="band-freq">${band.freq}</div>
+                        
+                        <div class="slider-label">Gain (dB)</div>
+                        <div class="slider-container">
+                            <input type="range" 
+                                   id="slider_${band.id}" 
+                                   min="${band.gainMin}" 
+                                   max="${band.gainMax}" 
+                                   step="0.1" 
+                                   value="${gainValue}"
+                                   oninput="updateValue('${band.id}', this.value)">
+                        </div>
+                        <div class="value-display" id="value_${band.id}">${parseFloat(gainValue).toFixed(1)} dB</div>
+                        <div class="band-range">${band.gainMin} - ${band.gainMax} dB</div>
+                        
+                        <div class="slider-label">Q (Breite)</div>
+                        <div class="slider-container">
+                            <input type="range" 
+                                   id="slider_${band.id}_q" 
+                                   min="${band.qMin}" 
+                                   max="${band.qMax}" 
+                                   step="0.1" 
+                                   value="${qValue}"
+                                   oninput="updateValue('${band.id}_q', this.value)">
+                        </div>
+                        <div class="value-display" id="value_${band.id}_q">${parseFloat(qValue).toFixed(1)}</div>
+                        <div class="band-range">${band.qMin} - ${band.qMax}</div>
+                    </div>
+                `;
+                grid.innerHTML += bandHtml;
+            });
+            
+            console.log("✓ EQ gerendert");
+        }
+
+        function updateValue(key, value) {
+            currentGains[key] = parseFloat(value);
+            document.getElementById(`value_${key}`).textContent = parseFloat(value).toFixed(1) + (key.includes('_q') ? '' : ' dB');
+        }
+
+        async function applyChanges() {
+            showStatus('⏳ Speichere Änderungen...', 'info');
+            console.log("💾 Speichere Änderungen:", currentGains);
+
+            try {
+                const response = await fetch('/api/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(currentGains)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(`✓ ${data.message}`, 'success');
+                    console.log("✓ Änderungen erfolgreich gespeichert!");
+                } else {
+                    showStatus(`✗ Fehler: ${data.message}`, 'error');
+                    console.error("✗ Fehler:", data);
+                }
+            } catch (error) {
+                showStatus(`✗ Fehler beim Speichern: ${error.message}`, 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        function resetAll() {
+            if (confirm('Alle EQ-Werte auf Standard zurücksetzen?')) {
+                Object.keys(currentGains).forEach(key => {
+                    currentGains[key] = originalGains[key] || 0;
+                });
+                renderEQ();
+                applyChanges();
+            }
+        }
+
+        function resetPreset() {
+            Object.assign(currentGains, originalGains);
+            renderEQ();
+            applyChanges();
+        }
+
+        function loadPreset(preset) {
+            const presets = {
+                music: { band_1: 5, band_2: 5, band_3: 3, band_4: -1.5, band_5: -2, band_6: -2, band_7: -3, band_8: 1.5, band_9: 2, band_10: 2 },
+                podcast: { band_1: 2, band_2: 1.5, band_3: 1.5, band_4: -1, band_5: -1.5, band_6: -1.5, band_7: -2, band_8: 2.5, band_9: 1.5, band_10: 0 },
+                bright: { band_1: 1, band_2: 1, band_3: 1, band_4: -0.5, band_5: -1, band_6: -1, band_7: -1.5, band_8: 3, band_9: 3, band_10: 3 },
+                warm: { band_1: 6, band_2: 6, band_3: 4, band_4: -1, band_5: -1.5, band_6: -1.5, band_7: -2, band_8: 0.5, band_9: 1, band_10: 1 }
+            };
+
+            if (presets[preset]) {
+                currentGains = { ...presets[preset] };
+                // Setze Q-Werte auf Default
+                bands.forEach(band => {
+                    if (!currentGains[`${band.id}_q`]) {
+                        currentGains[`${band.id}_q`] = 1.0;
+                    }
+                });
+                renderEQ();
+                applyChanges();
+                showStatus(`✓ Preset '${preset}' geladen!`, 'success');
+            }
+        }
+
+        function restorePipeWire() {
+            if (confirm('PipeWire neu starten? (Audioausfall für ~2 Sekunden)')) {
+                showStatus('⏳ Starte PipeWire neu...', 'info');
+                fetch('/api/restart', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        showStatus('✓ PipeWire wurde neu gestartet!', 'success');
+                    })
+                    .catch(error => {
+                        showStatus(`✗ Fehler: ${error.message}`, 'error');
+                    });
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            
+            setTimeout(() => {
+                statusEl.className = 'status-message';
+            }, 3000);
+        }
+
+        // Initialisiere beim Laden
+        window.addEventListener('load', initializeEQ);
+    </script>
+</body>
+</html>

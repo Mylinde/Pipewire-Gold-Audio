@@ -1,0 +1,289 @@
+from flask import Flask, render_template, request, jsonify
+import subprocess
+import re
+import json
+import os
+import shutil
+from datetime import datetime
+import time
+
+app = Flask(__name__, template_folder='templates')
+CONFIG_FILE = os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
+
+def get_gains():
+    """Liest die aktuellen EQ-Werte (Gain und Q) aus der Config-Datei"""
+    if not os.path.exists(CONFIG_FILE):
+        print(f"Fehler: Config-Datei nicht gefunden: {CONFIG_FILE}")
+        return {}
+    
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            content = f.read()
+        
+        gains = {}
+        for i in range(1, 11):
+            # Lese Gain
+            gain_pattern = f'name = "eq_band_{i}"[^}}]*?Gain = ([\\d.-]+)'
+            gain_match = re.search(gain_pattern, content)
+            if gain_match:
+                gains[f'band_{i}'] = float(gain_match.group(1))
+                print(f"✓ Band {i} Gain: {gains[f'band_{i}']}")
+            else:
+                gains[f'band_{i}'] = 0.0
+                print(f"✗ Band {i} Gain nicht gefunden (default: 0.0)")
+            
+            # Lese Q
+            q_pattern = f'name = "eq_band_{i}"[^}}]*?Q = ([\\d.-]+)'
+            q_match = re.search(q_pattern, content)
+            if q_match:
+                gains[f'band_{i}_q'] = float(q_match.group(1))
+                print(f"✓ Band {i} Q: {gains[f'band_{i}_q']}")
+            else:
+                gains[f'band_{i}_q'] = 1.0
+                print(f"✗ Band {i} Q nicht gefunden (default: 1.0)")
+        
+        return gains
+    except Exception as e:
+        print(f"Fehler beim Lesen der Gains: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+
+def update_gain(band, value):
+    """Aktualisiert einen EQ-Wert (Gain) in der Config-Datei"""
+    if not os.path.exists(CONFIG_FILE):
+        raise Exception(f"Config-Datei nicht gefunden: {CONFIG_FILE}")
+    
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            content = f.read()
+        
+        print(f"\n📝 Verarbeite: {band} Gain = {value}")
+        
+        # Erstelle Backup
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = f"{CONFIG_FILE}.backup_{timestamp}"
+        shutil.copy2(CONFIG_FILE, backup_file)
+        print(f"✓ Backup erstellt: {backup_file}")
+        
+        # Pattern für Gain
+        old_pattern = f'(name = "{band}"[^}}]*?Gain = )[\\d.-]+'
+        
+        current_match = re.search(old_pattern, content)
+        if current_match:
+            print(f"  ✓ Gain gefunden: ...{current_match.group(0)[-40:]}")
+        else:
+            raise Exception(f"Gain-Pattern für {band} nicht gefunden")
+        
+        # Ersetze Gain
+        new_content = re.sub(old_pattern, rf'\g<1>{value}', content)
+        
+        if new_content == content:
+            raise Exception(f"Substitution für {band} fehlgeschlagen")
+        
+        print(f"  ✓ Gain aktualisiert")
+        
+        # Schreibe neue Config
+        with open(CONFIG_FILE, 'w') as f:
+            f.write(new_content)
+        print(f"  ✓ Datei gespeichert")
+        
+        return True
+        
+    except Exception as e:
+        print(f"  ✗ FEHLER: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
+def update_q(band, value):
+    """Aktualisiert den Q-Wert in der Config-Datei"""
+    if not os.path.exists(CONFIG_FILE):
+        raise Exception(f"Config-Datei nicht gefunden: {CONFIG_FILE}")
+    
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            content = f.read()
+        
+        print(f"\n📝 Verarbeite: {band} Q = {value}")
+        
+        # Erstelle Backup
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = f"{CONFIG_FILE}.backup_{timestamp}"
+        shutil.copy2(CONFIG_FILE, backup_file)
+        print(f"✓ Backup erstellt: {backup_file}")
+        
+        # Pattern für Q - muss VOR Gain kommen in der Zeile!
+        # Format: name = "eq_band_1" label = "bq_peaking" control = { Freq = 120.0 Q = 1.5 Gain = 5.0 }
+        old_pattern = f'(name = "{band}"[^}}]*?Q = )[\\d.-]+'
+        
+        current_match = re.search(old_pattern, content)
+        if current_match:
+            print(f"  ✓ Q gefunden: ...{current_match.group(0)[-40:]}")
+        else:
+            print(f"  ✗ Q-Pattern für {band} nicht gefunden!")
+            # Zeige was in der Zeile ist
+            for line in content.split('\n'):
+                if band in line:
+                    print(f"  Zeile: {line}")
+            raise Exception(f"Q-Pattern für {band} nicht gefunden")
+        
+        # Ersetze Q
+        new_content = re.sub(old_pattern, rf'\g<1>{value}', content)
+        
+        if new_content == content:
+            raise Exception(f"Q-Substitution für {band} fehlgeschlagen")
+        
+        print(f"  ✓ Q aktualisiert")
+        
+        # Schreibe neue Config
+        with open(CONFIG_FILE, 'w') as f:
+            f.write(new_content)
+        print(f"  ✓ Datei gespeichert")
+        
+        return True
+        
+    except Exception as e:
+        print(f"  ✗ FEHLER: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
+def restart_pipewire():
+    """Startet PipeWire sauber neu"""
+    try:
+        print("\n🔄 Starte PipeWire neu...")
+        
+        # Stoppe
+        subprocess.run(['systemctl', '--user', 'stop', 'pipewire'], capture_output=True, timeout=5)
+        print("  ✓ PipeWire gestoppt")
+        
+        time.sleep(1)
+        
+        # Starte
+        result = subprocess.run(['systemctl', '--user', 'start', 'pipewire'], capture_output=True, timeout=10)
+        time.sleep(2)
+        
+        if result.returncode == 0:
+            print("✓ PipeWire neu gestartet")
+            return True
+        else:
+            print(f"✗ Fehler: {result.stderr.decode()}")
+            return False
+    except Exception as e:
+        print(f"✗ Fehler: {e}")
+        raise
+
+@app.route('/')
+def index():
+    try:
+        gains = get_gains()
+        print(f"\n📊 Sende Gains an Frontend: {gains}")
+        return render_template('eq.html', gains=json.dumps(gains))
+    except Exception as e:
+        print(f"✗ Fehler in index(): {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Fehler: {e}", 500
+
+@app.route('/api/gains', methods=['GET'])
+def get_gains_api():
+    """API-Endpoint zum Abrufen der Gains und Q-Werte"""
+    try:
+        gains = get_gains()
+        print(f"\n📊 /api/gains gibt zurück: {gains}")
+        return jsonify(gains)
+    except Exception as e:
+        print(f"✗ Fehler in /api/gains: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/update', methods=['POST'])
+def update():
+    """API-Endpoint zum Aktualisieren von Gain und Q"""
+    try:
+        data = request.json
+        print(f"\n{'='*60}")
+        print(f"📝 UPDATE-REQUEST erhalten")
+        print(f"{'='*60}")
+        print(f"Daten: {data}")
+        
+        if not data:
+            return jsonify({'status': 'error', 'message': 'Keine Daten erhalten'}), 400
+        
+        success_count = 0
+        error_count = 0
+        
+        # Speichere alle Änderungen
+        for key, value in data.items():
+            try:
+                # Trenne Band und Parameter
+                # Format: "eq_band_1_gain" oder "eq_band_1_q"
+                if '_gain' in key:
+                    band = key.replace('_gain', '')
+                    update_gain(band, float(value))
+                    success_count += 1
+                elif '_q' in key:
+                    band = key.replace('_q', '')
+                    update_q(band, float(value))
+                    success_count += 1
+                else:
+                    print(f"⚠ Unbekannter Parameter: {key}")
+                    error_count += 1
+            except Exception as e:
+                print(f"✗ Fehler bei {key}: {e}")
+                error_count += 1
+        
+        print(f"\n📊 Ergebnis: {success_count} erfolgreich, {error_count} Fehler")
+        
+        # Restart PipeWire nach ALLEN Änderungen
+        if success_count > 0:
+            restart_pipewire()
+        
+        return jsonify({
+            'status': 'ok' if error_count == 0 else 'partial',
+            'message': f'{success_count} Änderungen gespeichert' + (f', {error_count} Fehler' if error_count > 0 else ''),
+            'success': success_count,
+            'errors': error_count
+        })
+    except Exception as e:
+        print(f"✗ Fehler in /api/update: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/restart', methods=['POST'])
+def restart():
+    """API-Endpoint zum Neustart von PipeWire"""
+    try:
+        restart_pipewire()
+        return jsonify({'status': 'ok', 'message': 'PipeWire neu gestartet'})
+    except Exception as e:
+        print(f"✗ Fehler in /api/restart: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Nicht gefunden'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    print(f"✗ Internal Server Error: {error}")
+    import traceback
+    traceback.print_exc()
+    return jsonify({'error': 'Interner Fehler'}), 500
+
+if __name__ == '__main__':
+    print("="*60)
+    print("🎵 PipeWire EQ Editor Server")
+    print("="*60)
+    print(f"📁 Config-Datei: {CONFIG_FILE}")
+    print(f"✓ Existiert: {os.path.exists(CONFIG_FILE)}")
+    print(f"📊 Aktuelle Gains und Q-Werte:")
+    gains = get_gains()
+    for key, value in sorted(gains.items()):
+        print(f"   {key}: {value}")
+    print("="*60)
+    print("🌐 Server läuft auf: http://127.0.0.1:5000")
+    print("="*60 + "\n")
+    
+    app.run(debug=True, host='127.0.0.1', port=5000)
