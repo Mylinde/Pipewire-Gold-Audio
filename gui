@@ -10,6 +10,31 @@ import time
 app = Flask(__name__, template_folder='templates')
 CONFIG_FILE = os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
 
+# Neuer Backup-Ordner & Limit
+BACKUP_DIR = os.path.expanduser("~/.local/share/pipewire/backups")
+MAX_BACKUPS = 10
+
+def make_backup():
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    base = os.path.basename(CONFIG_FILE)
+    # vorhandene Backups (älteste zuerst)
+    files = [f for f in os.listdir(BACKUP_DIR) if f.startswith(base + ".backup_")]
+    files_paths = [os.path.join(BACKUP_DIR, f) for f in files]
+    files_sorted = sorted(files_paths, key=os.path.getmtime)
+    if len(files_sorted) < MAX_BACKUPS:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_name = f"{base}.backup_{timestamp}"
+        backup_path = os.path.join(BACKUP_DIR, backup_name)
+    else:
+        # Limit erreicht: ältestes überschreiben
+        backup_path = files_sorted[0]
+    shutil.copy2(CONFIG_FILE, backup_path)
+    try:
+        os.utime(backup_path, None)
+    except Exception:
+        pass
+    return backup_path
+
 def get_gains():
     """Liest die aktuellen EQ-Werte (Gain und Q) aus der Config-Datei"""
     if not os.path.exists(CONFIG_FILE):
@@ -60,24 +85,23 @@ def update_gain(band, value):
         
         print(f"\n📝 Verarbeite: {band} Gain = {value}")
         
-        # Erstelle Backup
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = f"{CONFIG_FILE}.backup_{timestamp}"
-        shutil.copy2(CONFIG_FILE, backup_file)
-        print(f"✓ Backup erstellt: {backup_file}")
-        
-        # Pattern für Gain
-        old_pattern = f'(name = "{band}"[^}}]*?Gain = )[\\d.-]+'
-        
+        # Prüfe aktuellen Wert zuerst, damit kein unnötiges Backup entsteht
+        old_pattern = f'(name = "{band}"[^}}]*?Gain = )([\\d.-]+)'
         current_match = re.search(old_pattern, content)
         if current_match:
-            print(f"  ✓ Gain gefunden: ...{current_match.group(0)[-40:]}")
+            current_value = float(current_match.group(2))
+            if abs(current_value - float(value)) < 1e-6:
+                print(f"  ✓ Gain ist bereits {current_value} — keine Änderung nötig")
+                return True
         else:
             raise Exception(f"Gain-Pattern für {band} nicht gefunden")
         
+        # Erstelle Backup
+        backup_file = make_backup()
+        print(f"✓ Backup erstellt: {backup_file}")
+        
         # Ersetze Gain
         new_content = re.sub(old_pattern, rf'\g<1>{value}', content)
-        
         if new_content == content:
             raise Exception(f"Substitution für {band} fehlgeschlagen")
         
@@ -107,30 +131,27 @@ def update_q(band, value):
         
         print(f"\n📝 Verarbeite: {band} Q = {value}")
         
-        # Erstelle Backup
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = f"{CONFIG_FILE}.backup_{timestamp}"
-        shutil.copy2(CONFIG_FILE, backup_file)
-        print(f"✓ Backup erstellt: {backup_file}")
-        
-        # Pattern für Q - muss VOR Gain kommen in der Zeile!
-        # Format: name = "eq_band_1" label = "bq_peaking" control = { Freq = 120.0 Q = 1.5 Gain = 5.0 }
-        old_pattern = f'(name = "{band}"[^}}]*?Q = )[\\d.-]+'
-        
+        # Pattern für Q - prüfe aktuellen Wert zuerst
+        old_pattern = f'(name = "{band}"[^}}]*?Q = )([\\d.-]+)'
         current_match = re.search(old_pattern, content)
         if current_match:
-            print(f"  ✓ Q gefunden: ...{current_match.group(0)[-40:]}")
+            current_value = float(current_match.group(2))
+            if abs(current_value - float(value)) < 1e-6:
+                print(f"  ✓ Q ist bereits {current_value} — keine Änderung nötig")
+                return True
         else:
             print(f"  ✗ Q-Pattern für {band} nicht gefunden!")
-            # Zeige was in der Zeile ist
             for line in content.split('\n'):
                 if band in line:
                     print(f"  Zeile: {line}")
             raise Exception(f"Q-Pattern für {band} nicht gefunden")
         
+        # Erstelle Backup
+        backup_file = make_backup()
+        print(f"✓ Backup erstellt: {backup_file}")
+        
         # Ersetze Q
         new_content = re.sub(old_pattern, rf'\g<1>{value}', content)
-        
         if new_content == content:
             raise Exception(f"Q-Substitution für {band} fehlgeschlagen")
         
@@ -216,19 +237,37 @@ def update():
         # Speichere alle Änderungen
         for key, value in data.items():
             try:
-                # Trenne Band und Parameter
-                # Format: "eq_band_1_gain" oder "eq_band_1_q"
-                if '_gain' in key:
-                    band = key.replace('_gain', '')
-                    update_gain(band, float(value))
-                    success_count += 1
-                elif '_q' in key:
-                    band = key.replace('_q', '')
-                    update_q(band, float(value))
-                    success_count += 1
+                # Bestimme Basis-Band-Key (z.B. "band_10" oder "eq_band_10")
+                if key.endswith('_gain'):
+                    base = key[:-5]  # entferne "_gain"
+                    param = 'gain'
+                elif key.endswith('_q'):
+                    base = key[:-2]  # entferne "_q"
+                    param = 'q'
+                elif re.match(r'^band_\d+$', key):
+                    base = key
+                    param = 'gain'
                 else:
                     print(f"⚠ Unbekannter Parameter: {key}")
                     error_count += 1
+                    continue
+
+                # Normalisiere auf Config-Namen: "eq_band_10"
+                if base.startswith('eq_'):
+                    cfg_band = base
+                elif base.startswith('band_'):
+                    cfg_band = 'eq_' + base
+                else:
+                    cfg_band = base  # fallback
+
+                # Aufruf der Aktualisierer
+                if param == 'gain':
+                    update_gain(cfg_band, float(value))
+                else:
+                    update_q(cfg_band, float(value))
+
+                success_count += 1
+
             except Exception as e:
                 print(f"✗ Fehler bei {key}: {e}")
                 error_count += 1
