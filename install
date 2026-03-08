@@ -122,6 +122,9 @@ case "$1" in
             rm -f ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
             rm -f ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
             echo "✓ Filter configurations removed"
+            echo "Removing backups..."
+            rm -rf ~/.local/share/pipewire
+            echo "✓ Backups removed"
             
             # Check if pipewire.conf exists and ask before removing
             if [ -f ~/.config/pipewire/pipewire.conf.d/pipewire.conf ]; then

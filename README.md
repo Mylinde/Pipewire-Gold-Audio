@@ -43,10 +43,29 @@ This project provides automated installation and configuration of PipeWire with 
 - PipeWire installed and active
 - `wpctl` (Part of PipeWire)
 - `sudo` or `doas` for group management
+- Python 3.8+ (for GUI)
+- Flask (for GUI)
 
 ### Optional (for RT Priority)
 - Configuration in `/etc/security/limits.d/25-pw-rlimits.conf`
 - Membership in the `pipewire` group
+
+### Optional (for Production Deployment)
+- Gunicorn (for production-grade server)
+
+### Python Dependencies Installation
+
+Install required Python packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+Or install individually:
+
+```bash
+pip install Flask gunicorn
+```
 
 ## Installation
 
@@ -100,14 +119,19 @@ The script will:
 ```
 .
 ├── install                          # Installation script
+├── gui.py                           # Web GUI server
+├── gunicorn_config.py               # Gunicorn configuration
+├── config.json                      # GUI configuration
 ├── README.md                        # This file
 ├── LICENSE                          # MIT License
 ├── pipewire.conf.d/
 │   ├── pipewire.conf               # Main PipeWire configuration
 │   ├── sink-eq10-5.1.conf          # HeSuVi 5.1 filter configuration
 │   └── sink-eq10-wide.conf         # Standard EQ stereo configuration
-└── hesuvi/
-    └── hesuvi.wav                  # HeSuVi HRTF Impulse Response
+├── hesuvi/
+│   └── hesuvi.wav                  # HeSuVi HRTF Impulse Response
+└── templates/
+    └── eq.html                     # Web GUI interface
 ```
 
 ## Configurations
@@ -161,6 +185,96 @@ Factor = 10^(dB / 20)
 +4dB  ≈ 1.58
 +6dB  ≈ 2.00
 ```
+
+## Web GUI
+
+The project includes an interactive web-based EQ editor for real-time audio adjustments.
+
+### Features
+
+- **Real-time EQ adjustments** with instant preview
+- **Dual sliders per band**: Gain (dB) and Q (bandwidth) control
+- **Audio presets**: Music, Podcast, Bright, Warm, Custom
+- **Visual feedback**: Live value displays and status messages
+- **Automatic backups**: All changes are backed up to `~/.local/share/pipewire/backups/`
+- **Modern UI**: Responsive design with Material Design icons
+
+### Running the GUI
+
+#### Development Mode (Flask built-in server)
+
+```bash
+python3 gui.py
+```
+
+**Pros:**
+- Simple one-command startup
+- Auto-reload on code changes
+- Great for development and testing
+
+**Cons:**
+- Single-threaded (only one connection at a time)
+- Not suitable for production
+- Slower performance
+
+Then open your browser and navigate to: **http://127.0.0.1:1338**
+
+#### Production Mode (Gunicorn WSGI server)
+
+```bash
+python3 -B -m gunicorn --config gunicorn_config.py gui:app
+```
+
+**Pros:**
+- Multi-worker support (concurrent connections)
+- Better performance and stability
+- Production-grade reliability
+- Pre-fork worker model for robustness
+
+**Cons:**
+- Requires gunicorn installation: `pip install gunicorn`
+
+Installation:
+```bash
+pip install gunicorn
+```
+
+Then navigate to: **http://127.0.0.1:1338**
+
+### GUI Configuration
+
+Edit `config.json` to customize GUI behavior:
+
+```json
+{
+  "site_config": {
+    "title": "PipeWire Gold Audio EQ Editor",
+    "port": 5000,
+    "host": "127.0.0.1"
+  }
+}
+```
+
+### Backup Management
+
+All EQ changes are automatically backed up to:
+
+```
+~/.local/share/pipewire/backups/
+```
+
+- **Backup strategy**: Circular (oldest backup is overwritten when limit reached)
+- **Max backups**: 10 per configuration file
+- **Naming**: `sink-eq10-wide.conf.backup_YYYYMMDD_HHMMSS`
+
+### Presets
+
+Available presets for quick EQ switching:
+
+- **🎵 Musik** - Boosted bass and presence for music listening
+- **🎙️ Podcast** - Optimized for speech intelligibility
+- **✨ Hell** - Bright, detailed sound for analytical listening
+- **🔥 Warm** - Warm, smooth sound for casual listening
 
 ## Automatically Configured Values
 
@@ -321,9 +435,29 @@ If audio sounds distorted or clips:
 3. Check playback volume in system settings
 4. Reduce overall gain if needed
 
+### GUI Won't Start
+
+**Flask dev server issues:**
+```bash
+# Make sure Flask is installed
+pip install flask
+
+# Run with verbose output
+python3 -u gui.py
+```
+
+**Gunicorn issues:**
+```bash
+# Check for permission errors
+python3 -B -m gunicorn --config gunicorn_config.py gui:app
+
+# If pkg_resources error occurs, use Flask dev server instead
+python3 gui.py
+```
+
 ## Customizing EQ Settings
 
-EQ bands can be adjusted in `sink-eq10-wide.conf`:
+EQ bands can be adjusted in `sink-eq10-wide.conf` or through the web GUI:
 
 ```ini
 { type = "builtin" name = "eq_band_1" label = "bq_peaking" 
@@ -333,6 +467,22 @@ EQ bands can be adjusted in `sink-eq10-wide.conf`:
 - **Freq**: Center frequency in Hz
 - **Q**: Quality factor (higher = narrower bandwidth, more precise)
 - **Gain**: Boost/Cut in dB (positive = boost, negative = cut)
+
+### Via Web GUI
+
+1. Start the GUI: `python3 gui.py` or `python3 -B -m gunicorn --config gunicorn_config.py gui:app`
+2. Open **http://127.0.0.1:1338** in your browser
+3. Adjust sliders for Gain and Q values
+4. Click "Änderungen speichern" to apply changes
+5. Changes are automatically backed up and PipeWire is restarted
+
+### Manual Editing
+
+Edit `~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf` directly and restart PipeWire:
+
+```bash
+systemctl --user restart pipewire
+```
 
 ### Soft-Limiter Adjustment
 
@@ -359,7 +509,7 @@ systemctl --user restart pipewire
 - **No hardware compressor**: PipeWire filter-chain does not include native compressor. Use soft-limiter or reduce EQ gains instead.
 - **Single target device**: Each configuration targets one audio sink. For multiple devices, manually create separate configurations.
 - **HeSuVi 5.1 CPU intensive**: Convolver + 20 EQ bands require significant CPU. Use Standard EQ for lower-end systems.
-- **No real-time parameter control**: EQ settings require PipeWire restart after changes.
+- **GUI requires restart**: EQ parameter changes via GUI trigger automatic PipeWire restart (~2 seconds of audio loss)
 
 ## License
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from flask import Flask, render_template, request, jsonify
 import subprocess
 import re
@@ -6,6 +8,10 @@ import os
 import shutil
 from datetime import datetime
 import time
+import argparse
+
+config = json.loads(open('config.json', 'r').read())
+site_config = config['site_config']
 
 app = Flask(__name__, template_folder='templates')
 CONFIG_FILE = os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
@@ -311,18 +317,48 @@ def internal_error(error):
     traceback.print_exc()
     return jsonify({'error': 'Interner Fehler'}), 500
 
-if __name__ == '__main__':
-    print("="*60)
-    print("🎵 PipeWire EQ Editor Server")
-    print("="*60)
-    print(f"📁 Config-Datei: {CONFIG_FILE}")
-    print(f"✓ Existiert: {os.path.exists(CONFIG_FILE)}")
-    print(f"📊 Aktuelle Gains und Q-Werte:")
-    gains = get_gains()
-    for key, value in sorted(gains.items()):
-        print(f"   {key}: {value}")
-    print("="*60)
-    print("🌐 Server läuft auf: http://127.0.0.1:5000")
-    print("="*60 + "\n")
-    
-    app.run(debug=True, host='127.0.0.1', port=5000)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Start the server")
+    parser.add_argument("-p", "--port", type=int, default=site_config["port"],
+                        help="Port number (default: %(default)d)")
+    parser.add_argument("-b", "--host", default="0.0.0.0",
+                        help="Host address (default: %(default)s)")
+
+    arguments = parser.parse_args()
+
+    if "GUNICORN_ARGV" in dict(os.environ):
+        run_with_gunicorn = True
+        os.environ.pop("GUNICORN_ARGV")
+        port = int(os.getenv("PORT", site_config["port"]))
+        host = os.getenv("HOST", "0.0.0.0")
+    else:
+        run_with_gunicorn = False
+
+    if run_with_gunicorn:
+        print("Running with Gunicorn...")
+        print(f"Host: {host}")
+        print(f"Port: {port}")
+
+        from gunicorn.app.wsgiapp import WSGIApplication
+        options = {
+            'bind': f'{host}:{port}',
+            'workers': 2,
+            'reload': False,
+        }
+
+        WSGIApplication(app).run(**options)
+    else:
+        print("="*60)
+        print("🎵 PipeWire EQ Editor Server")
+        print("="*60)
+        print(f"📁 Config-Datei: {CONFIG_FILE}")
+        print(f"✓ Existiert: {os.path.exists(CONFIG_FILE)}")
+        print(f"📊 Aktuelle Gains und Q-Werte:")
+        gains = get_gains()
+        for key, value in sorted(gains.items()):
+            print(f"   {key}: {value}")
+        print("="*60)
+        print("🌐 Server läuft auf: http://127.0.0.1:1338")
+        print("="*60 + "\n")
+        
+        app.run(debug=True, host='127.0.0.1', port=1338)
