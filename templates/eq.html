@@ -13,7 +13,7 @@
             --muted: #6b7280;
             --accent-1: #214daf; /* primary blue */
             --accent-2: #06b6d4; /* cyan */
-            --danger: #ef4444;
+            --danger: #ef4444a9;
             --shadow-strong: rgba(0,0,0,0.18);
             --shadow-soft: rgba(0,0,0,0.08);
         }
@@ -71,13 +71,13 @@
             border-radius: 15px;
             text-align: center;
             transition: all 0.3s ease;
-            border: 2px solid rgba(15,23,42,0.04);
+            border: 2px solid rgba(15,23,42,0.08);
             box-shadow: 0 8px 26px var(--shadow-soft);
         }
 
         .eq-band:hover {
-            background: linear-gradient(180deg, rgba(37,99,235,0.02), rgba(37,99,235,0.08));
-            border-color: var(--accent-1);
+            background: linear-gradient(180deg, rgba(37,99,235,0.02), rgba(37,99,235,0.06));
+            border-color: var(--accent-1,0.08);
             box-shadow: 0 10px 30px rgba(37,99,235,0.08);
             transform: translate(2px,-2px);            
         }
@@ -213,7 +213,7 @@
         }
 
         .btn-danger {
-            background: var(--accent-1);
+            background: var(--danger);
             color: white;
             transition: filter .18s ease, transform .18s ease, box-shadow .18s ease;
         }
@@ -221,7 +221,7 @@
         .btn-danger:hover {
             filter: brightness(.98);
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(33,77,175,0.12);
+            box-shadow: 0 14px 28px rgba(37,99,235,0.12);
         }
 
         .btn-primary .material-icons,
@@ -311,8 +311,7 @@
             transform: translateY(-3px);
             box-shadow: 0 8px 20px rgba(37,99,235,0.12);
         }
-
-        /* Icon beim Hover weiß machen */
+        
         .btn-preset:hover .material-icons {
             color: white !important;
         }
