@@ -1,0 +1,340 @@
+const bands = [
+    { id: 'band_1', label: 'Bass Boost', freq: '120 Hz', gainMin: 0, gainMax: 10, qMin: 0.1, qMax: 5 },
+    { id: 'band_2', label: 'Foundation', freq: '200 Hz', gainMin: 0, gainMax: 10, qMin: 0.1, qMax: 5 },
+    { id: 'band_3', label: 'Warmth', freq: '400 Hz', gainMin: 0, gainMax: 10, qMin: 0.1, qMax: 5 },
+    { id: 'band_4', label: 'Anti-Boxy', freq: '600 Hz', gainMin: -5, gainMax: 0, qMin: 0.1, qMax: 5 },
+    { id: 'band_5', label: 'Anti-Nasal', freq: '1000 Hz', gainMin: -5, gainMax: 0, qMin: 0.1, qMax: 5 },
+    { id: 'band_6', label: 'Midrange', freq: '1500 Hz', gainMin: -5, gainMax: 0, qMin: 0.1, qMax: 5 },
+    { id: 'band_7', label: 'Anti-Plastic', freq: '2000 Hz', gainMin: -5, gainMax: 0, qMin: 0.1, qMax: 5 },
+    { id: 'band_8', label: 'Presence', freq: '4500 Hz', gainMin: 0, gainMax: 5, qMin: 0.1, qMax: 5 },
+    { id: 'band_9', label: 'Brilliance', freq: '9000 Hz', gainMin: 0, gainMax: 5, qMin: 0.1, qMax: 5 },
+    { id: 'band_10', label: 'Air', freq: '12000 Hz', gainMin: 0, gainMax: 5, qMin: 0.1, qMax: 5 }
+];
+
+const originalGains = {};
+let currentGains = {};
+let saveTimeout;
+
+async function initializeEQ() {
+    console.log("🎵 Initialisiere EQ Editor...");
+    
+    try {
+        const response = await fetch('/api/gains');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+        
+        currentGains = await response.json();
+        console.log("✓ Gains vom Server geladen:", currentGains);
+        
+        Object.assign(originalGains, currentGains);
+        
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('eqGrid').style.display = 'grid';
+        document.getElementById('controlsSection').style.display = 'flex';
+        
+        renderEQ();
+        
+        showStatus('✓ Konfiguration erfolgreich geladen!', 'success');
+        
+    } catch (error) {
+        console.error("✗ Fehler beim Laden:", error);
+        showStatus(`✗ Fehler beim Laden der Konfiguration: ${error.message}`, 'error');
+        
+        console.log("⚠ Verwende Default-Werte...");
+        bands.forEach(band => {
+            currentGains[`${band.id}`] = 0;
+            currentGains[`${band.id}_q`] = 1.0;
+        });
+        Object.assign(originalGains, currentGains);
+        
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('eqGrid').style.display = 'grid';
+        document.getElementById('controlsSection').style.display = 'flex';
+        
+        renderEQ();
+    }
+}
+
+function renderEQ() {
+    console.log("🎨 Rendere EQ mit Gains:", currentGains);
+    
+    const grid = document.getElementById('eqGrid');
+    grid.innerHTML = '';
+
+    bands.forEach(band => {
+        const gainValue = currentGains[band.id] || 0;
+        const qValue = currentGains[`${band.id}_q`] || 1.0;
+        
+        const bandHtml = `
+            <div class="eq-band">
+                <div class="band-label">${band.label}</div>
+                <div class="band-freq">${band.freq}</div>
+                
+                <div class="slider-label">Gain (dB)</div>
+                <div class="slider-container">
+                    <input type="range" 
+                           id="slider_${band.id}" 
+                           min="${band.gainMin}" 
+                           max="${band.gainMax}" 
+                           step="0.1" 
+                           value="${gainValue}"
+                           oninput="onSliderInput('${band.id}')"
+                           onmouseup="onSliderEnd('${band.id}')"
+                           ontouchend="onSliderEnd('${band.id}')">
+                    <div class="value-display" id="value_${band.id}">${parseFloat(gainValue).toFixed(1)} dB</div>
+                    <div class="band-range">${band.gainMin} - ${band.gainMax} dB</div>
+                </div>
+                
+                <div class="slider-label">Q (Breite)</div>
+                <div class="slider-container">
+                    <input type="range" 
+                           id="slider_${band.id}_q" 
+                           min="${band.qMin}" 
+                           max="${band.qMax}" 
+                           step="0.1" 
+                           value="${qValue}"
+                           oninput="onQSliderChange('${band.id}')">
+                    <div class="value-display" id="value_${band.id}_q">${parseFloat(qValue).toFixed(1)}</div>
+                    <div class="band-range">${band.qMin} - ${band.qMax}</div>
+                </div>
+            </div>
+        `;
+        grid.innerHTML += bandHtml;
+    });
+    
+    console.log("✓ EQ gerendert");
+}
+
+function updateValue(key, value) {
+    currentGains[key] = parseFloat(value);
+    document.getElementById(`value_${key}`).textContent = parseFloat(value).toFixed(1) + (key.includes('_q') ? '' : ' dB');
+}
+
+function onSliderInput(bandId) {
+    // Nur Frontend Update, KEIN Server-Call
+    const gainSlider = document.getElementById(`slider_${bandId}`);
+    const valueDisplay = document.getElementById(`value_${bandId}`);
+    if (gainSlider && valueDisplay) {
+        valueDisplay.textContent = parseFloat(gainSlider.value).toFixed(1) + ' dB';
+        currentGains[bandId] = parseFloat(gainSlider.value);
+    }
+    showStatus('⏳ Wert geändert (wird beim Loslassen gespeichert)...', 'info');
+}
+
+function onSliderEnd(bandId) {
+    // Wird aufgerufen wenn User Slider loslässt (mouseup/touchend)
+    console.log(`📤 Slider-Ende für ${bandId}: Speichere und starte PipeWire neu`);
+    showStatus('⏳ Speichere Änderungen...', 'info');
+    
+    const data = {};
+    bands.forEach(band => {
+        const gainSlider = document.getElementById(`slider_${band.id}`);
+        const qSlider = document.getElementById(`slider_${band.id}_q`);
+        if (gainSlider) data[band.id] = parseFloat(gainSlider.value);
+        if (qSlider) data[`${band.id}_q`] = parseFloat(qSlider.value);
+    });
+    
+    // Kein Backup, aber Restart!
+    data['_backup'] = false;
+    data['_restart'] = true;
+    
+    fetch('/api/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.status === 'ok' || result.status === 'partial') {
+            showStatus('✓ Änderungen angewendet!', 'success');
+        } else {
+            showStatus(`✗ ${result.message}`, 'error');
+        }
+    })
+    .catch(error => showStatus(`✗ Fehler: ${error.message}`, 'error'));
+}
+
+function onQSliderChange(bandId) {
+    // Aktualisiere sofort im Frontend
+    const qSlider = document.getElementById(`slider_${bandId}_q`);
+    const valueDisplay = document.getElementById(`value_${bandId}_q`);
+    if (qSlider && valueDisplay) {
+        valueDisplay.textContent = parseFloat(qSlider.value).toFixed(1);
+        currentGains[`${bandId}_q`] = parseFloat(qSlider.value);
+    }
+    
+    showStatus('⏳ Speichere Änderungen...', 'info');
+    
+    // Debounce: speichere nach 500ms Inaktivität
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+        console.log(`📝 Auto-Save für ${bandId}_q`);
+        saveChanges();
+    }, 500);
+}
+
+async function saveChanges() {
+    console.log("💾 Speichere Änderungen (Auto-Save)...");
+    const data = {};
+    
+    // Sammle alle Slider-Werte
+    bands.forEach(band => {
+        const gainSlider = document.getElementById(`slider_${band.id}`);
+        const qSlider = document.getElementById(`slider_${band.id}_q`);
+        
+        if (gainSlider) data[band.id] = parseFloat(gainSlider.value);
+        if (qSlider) data[`${band.id}_q`] = parseFloat(qSlider.value);
+    });
+    
+    try {
+        const response = await fetch('/api/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'ok' || result.status === 'partial') {
+            showStatus('✓ Änderungen angewendet!', 'success');
+        } else {
+            showStatus(`✗ ${result.message}`, 'error');
+        }
+    } catch (error) {
+        showStatus(`✗ Fehler: ${error.message}`, 'error');
+    }
+}
+
+async function applyChangesWithRestart() {
+    showStatus('⏳ Speichere Änderungen und starte PipeWire neu...', 'info');
+    console.log("💾 Speichere Änderungen mit Restart:", currentGains);
+
+    try {
+        const data = { ...currentGains };
+        data['_backup'] = true;
+        data['_restart'] = true;
+        
+        const response = await fetch('/api/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            showStatus(`✓ ${result.message}`, 'success');
+            console.log("✓ Änderungen erfolgreich gespeichert und PipeWire neu gestartet!");
+        } else {
+            showStatus(`✗ Fehler: ${result.message}`, 'error');
+            console.error("✗ Fehler:", result);
+        }
+    } catch (error) {
+        showStatus(`✗ Fehler beim Speichern: ${error.message}`, 'error');
+        console.error('Error:', error);
+    }
+}
+
+async function applyChanges() {
+    showStatus('⏳ Speichere Änderungen...', 'info');
+    console.log("💾 Speichere Änderungen (manuell):", currentGains);
+
+    try {
+        const data = { ...currentGains };
+        data['_backup'] = true;
+        data['_restart'] = true;
+        
+        const response = await fetch('/api/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            showStatus(`✓ ${result.message}`, 'success');
+            console.log("✓ Änderungen erfolgreich gespeichert!");
+        } else {
+            showStatus(`✗ Fehler: ${result.message}`, 'error');
+            console.error("✗ Fehler:", result);
+        }
+    } catch (error) {
+        showStatus(`✗ Fehler beim Speichern: ${error.message}`, 'error');
+        console.error('Error:', error);
+    }
+}
+
+function resetAll() {
+    if (confirm('Alle EQ-Werte auf Standard zurücksetzen?')) {
+        Object.keys(currentGains).forEach(key => {
+            currentGains[key] = originalGains[key] || 0;
+        });
+        renderEQ();
+        applyChangesWithRestart();
+    }
+}
+
+function resetPreset() {
+    if (confirm('Zum letzten Backup zurücksetzen?')) {
+        Object.assign(currentGains, originalGains);
+        renderEQ();
+        applyChangesWithRestart();
+    }
+}
+
+function loadPreset(preset) {
+    const presets = {
+        music: { band_1: 5, band_2: 5, band_3: 3, band_4: -1.5, band_5: -2, band_6: -2, band_7: -3, band_8: 1.5, band_9: 2, band_10: 2 },
+        podcast: { band_1: 2, band_2: 1.5, band_3: 1.5, band_4: -1, band_5: -1.5, band_6: -1.5, band_7: -2, band_8: 2.5, band_9: 1.5, band_10: 0 },
+        bright: { band_1: 1, band_2: 1, band_3: 1, band_4: -0.5, band_5: -1, band_6: -1, band_7: -1.5, band_8: 3, band_9: 3, band_10: 3 },
+        warm: { band_1: 6, band_2: 6, band_3: 4, band_4: -1, band_5: -1.5, band_6: -1.5, band_7: -2, band_8: 0.5, band_9: 1, band_10: 1 }
+    };
+
+    if (presets[preset]) {
+        currentGains = { ...presets[preset] };
+        // Setze Q-Werte auf Default
+        bands.forEach(band => {
+            if (!currentGains[`${band.id}_q`]) {
+                currentGains[`${band.id}_q`] = 1.0;
+            }
+        });
+        renderEQ();
+        applyChanges();
+        showStatus(`✓ Preset '${preset}' geladen!`, 'success');
+    }
+}
+
+function restorePipeWire() {
+    if (confirm('PipeWire neu starten? (Audioausfall für ~2 Sekunden)')) {
+        showStatus('⏳ Starte PipeWire neu...', 'info');
+        fetch('/api/restart', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                showStatus('✓ PipeWire wurde neu gestartet!', 'success');
+            })
+            .catch(error => {
+                showStatus(`✗ Fehler: ${error.message}`, 'error');
+            });
+    }
+}
+
+function showStatus(message, type) {
+    const statusEl = document.getElementById('statusMessage');
+    statusEl.textContent = message;
+    statusEl.className = `status-message ${type}`;
+    console.log(`[${type.toUpperCase()}] ${message}`);
+    
+    setTimeout(() => {
+        statusEl.className = 'status-message';
+    }, 3000);
+}
+
+// Initialisiere beim Laden
+window.addEventListener('load', initializeEQ);
