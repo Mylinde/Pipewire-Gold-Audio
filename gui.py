@@ -231,6 +231,50 @@ def restart_pipewire():
     except Exception:
         return False
 
+def cleanup_duplicate_sinks():
+    """Remove duplicate audio sinks from PipeWire"""
+    try:
+        # Get all sinks
+        wpctl_status = subprocess.run(
+            "wpctl status",
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        sinks = {}
+        for line in wpctl_status.stdout.split('\n'):
+            if 'Pipewire Gold' in line:
+                # Extract sink ID and name
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    sink_id = parts[0].strip('*.')
+                    sink_name = ' '.join(parts[2:])
+                    
+                    if sink_name not in sinks:
+                        sinks[sink_name] = []
+                    sinks[sink_name].append(sink_id)
+        
+        # Remove duplicates (keep the first one)
+        for sink_name, sink_ids in sinks.items():
+            if len(sink_ids) > 1:
+                for sink_id in sink_ids[1:]:
+                    subprocess.run(
+                        f"wpctl set-default {sink_ids[0]}",
+                        shell=True,
+                        capture_output=True,
+                        timeout=5
+                    )
+                    subprocess.run(
+                        f"pactl remove-sink-input {sink_id}",
+                        shell=True,
+                        capture_output=True,
+                        timeout=5
+                    )
+    except Exception:
+        pass
+
 @app.route('/')
 def index():
     try:

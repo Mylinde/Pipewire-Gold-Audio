@@ -192,7 +192,7 @@ input[type="range"]::-moz-range-thumb {
 
 input[type="range"]:hover ~ .value-display {
     color: var(--accent-2);
-    transform: scale(1.1) translate(4px, 4px);
+    transform: scale(1.1) translate(4px, 6px);
     text-shadow: 0 2px 4px rgba(37,99,235,0.12);
     transition: all 0.2s ease;
 }
@@ -233,7 +233,7 @@ button {
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
+    transform: translate(2px, -2px);
     box-shadow: 0 14px 28px rgba(37,99,235,0.12);
 }
 
@@ -248,7 +248,7 @@ button {
 .btn-secondary:hover {
     background: rgba(37,99,235,0.06);
     border-color: var(--accent-1);
-    transform: translateY(-2px);
+    transform: translate(2px, -2px);
     box-shadow: 0 10px 30px rgba(37,99,235,0.10);
 }
 
@@ -260,7 +260,7 @@ button {
 
 .btn-danger:hover {
     filter: brightness(.98);
-    transform: translateY(-2px);
+    transform: translate(2px, -2px);
     box-shadow: 0 14px 28px rgba(37,99,235,0.12);
 }
 
@@ -357,7 +357,7 @@ button {
 .btn-preset:hover {
     background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
     color: white;
-    transform: translateY(-3px);
+    transform: translate(2px, -2px);
     box-shadow: 0 8px 20px rgba(37,99,235,0.12);
 }
 
@@ -425,6 +425,6 @@ button {
     font-size: 20px;
     vertical-align: middle;
     margin-right: 8px;
-    top: -0.0em;              
+    top: -0.06em;              
     position: relative;
 }
