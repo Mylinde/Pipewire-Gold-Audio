@@ -80,7 +80,7 @@ def get_gains():
         traceback.print_exc()
         return {}
 
-def update_gain(band, value):
+def update_gain(band, value, create_backup=True):
     """Aktualisiert einen EQ-Wert (Gain) in der Config-Datei"""
     if not os.path.exists(CONFIG_FILE):
         raise Exception(f"Config-Datei nicht gefunden: {CONFIG_FILE}")
@@ -91,27 +91,33 @@ def update_gain(band, value):
         
         print(f"\n📝 Verarbeite: {band} Gain = {value}")
         
-        # Prüfe aktuellen Wert zuerst, damit kein unnötiges Backup entsteht
+        # Pattern für Gain
         old_pattern = f'(name = "{band}"[^}}]*?Gain = )([\\d.-]+)'
         current_match = re.search(old_pattern, content)
-        if current_match:
-            current_value = float(current_match.group(2))
-            if abs(current_value - float(value)) < 1e-6:
-                print(f"  ✓ Gain ist bereits {current_value} — keine Änderung nötig")
-                return True
-        else:
+        
+        if not current_match:
             raise Exception(f"Gain-Pattern für {band} nicht gefunden")
         
-        # Erstelle Backup
-        backup_file = make_backup()
-        print(f"✓ Backup erstellt: {backup_file}")
+        current_value = float(current_match.group(2))
+        
+        # Wenn Wert gleich: keine Änderung
+        if abs(current_value - float(value)) < 1e-6:
+            print(f"  ℹ Gain ist bereits {current_value} — keine Änderung nötig")
+            return False
+        
+        # Erstelle Backup NUR wenn create_backup=True
+        if create_backup:
+            backup_file = make_backup()
+            print(f"✓ Backup erstellt: {backup_file}")
+        else:
+            print(f"ℹ Kein Backup (Auto-Save)")
         
         # Ersetze Gain
         new_content = re.sub(old_pattern, rf'\g<1>{value}', content)
         if new_content == content:
             raise Exception(f"Substitution für {band} fehlgeschlagen")
         
-        print(f"  ✓ Gain aktualisiert")
+        print(f"  ✓ Gain aktualisiert: {current_value} → {value}")
         
         # Schreibe neue Config
         with open(CONFIG_FILE, 'w') as f:
@@ -126,7 +132,7 @@ def update_gain(band, value):
         traceback.print_exc()
         raise
 
-def update_q(band, value):
+def update_q(band, value, create_backup=True):
     """Aktualisiert den Q-Wert in der Config-Datei"""
     if not os.path.exists(CONFIG_FILE):
         raise Exception(f"Config-Datei nicht gefunden: {CONFIG_FILE}")
@@ -137,31 +143,37 @@ def update_q(band, value):
         
         print(f"\n📝 Verarbeite: {band} Q = {value}")
         
-        # Pattern für Q - prüfe aktuellen Wert zuerst
+        # Pattern für Q
         old_pattern = f'(name = "{band}"[^}}]*?Q = )([\\d.-]+)'
         current_match = re.search(old_pattern, content)
-        if current_match:
-            current_value = float(current_match.group(2))
-            if abs(current_value - float(value)) < 1e-6:
-                print(f"  ✓ Q ist bereits {current_value} — keine Änderung nötig")
-                return True
-        else:
+        
+        if not current_match:
             print(f"  ✗ Q-Pattern für {band} nicht gefunden!")
             for line in content.split('\n'):
                 if band in line:
                     print(f"  Zeile: {line}")
             raise Exception(f"Q-Pattern für {band} nicht gefunden")
         
-        # Erstelle Backup
-        backup_file = make_backup()
-        print(f"✓ Backup erstellt: {backup_file}")
+        current_value = float(current_match.group(2))
+        
+        # Wenn Wert gleich: keine Änderung
+        if abs(current_value - float(value)) < 1e-6:
+            print(f"  ℹ Q ist bereits {current_value} — keine Änderung nötig")
+            return False
+        
+        # Erstelle Backup NUR wenn create_backup=True
+        if create_backup:
+            backup_file = make_backup()
+            print(f"✓ Backup erstellt: {backup_file}")
+        else:
+            print(f"ℹ Kein Backup (Auto-Save)")
         
         # Ersetze Q
         new_content = re.sub(old_pattern, rf'\g<1>{value}', content)
         if new_content == content:
             raise Exception(f"Q-Substitution für {band} fehlgeschlagen")
         
-        print(f"  ✓ Q aktualisiert")
+        print(f"  ✓ Q aktualisiert: {current_value} → {value}")
         
         # Schreibe neue Config
         with open(CONFIG_FILE, 'w') as f:
@@ -229,8 +241,13 @@ def update():
     """API-Endpoint zum Aktualisieren von Gain und Q"""
     try:
         data = request.json
+        
+        # Neuer Parameter: create_backup Flag
+        create_backup = data.pop('_backup', False)
+        restart_pw = data.pop('_restart', False)
+        
         print(f"\n{'='*60}")
-        print(f"📝 UPDATE-REQUEST erhalten")
+        print(f"📝 UPDATE-REQUEST erhalten (Backup: {create_backup}, Restart: {restart_pw})")
         print(f"{'='*60}")
         print(f"Daten: {data}")
         
@@ -239,16 +256,17 @@ def update():
         
         success_count = 0
         error_count = 0
+        actual_changes = 0
         
         # Speichere alle Änderungen
         for key, value in data.items():
             try:
-                # Bestimme Basis-Band-Key (z.B. "band_10" oder "eq_band_10")
+                # Bestimme Basis-Band-Key
                 if key.endswith('_gain'):
-                    base = key[:-5]  # entferne "_gain"
+                    base = key[:-5]
                     param = 'gain'
                 elif key.endswith('_q'):
-                    base = key[:-2]  # entferne "_q"
+                    base = key[:-2]
                     param = 'q'
                 elif re.match(r'^band_\d+$', key):
                     base = key
@@ -258,36 +276,46 @@ def update():
                     error_count += 1
                     continue
 
-                # Normalisiere auf Config-Namen: "eq_band_10"
+                # Normalisiere auf Config-Namen
                 if base.startswith('eq_'):
                     cfg_band = base
                 elif base.startswith('band_'):
                     cfg_band = 'eq_' + base
                 else:
-                    cfg_band = base  # fallback
+                    cfg_band = base
 
-                # Aufruf der Aktualisierer
+                # Aufruf der Aktualisierer mit create_backup Flag
+                changed = False
                 if param == 'gain':
-                    update_gain(cfg_band, float(value))
+                    changed = update_gain(cfg_band, float(value), create_backup=create_backup)
                 else:
-                    update_q(cfg_band, float(value))
+                    changed = update_q(cfg_band, float(value), create_backup=create_backup)
 
+                if changed:
+                    actual_changes += 1
+                
                 success_count += 1
 
             except Exception as e:
                 print(f"✗ Fehler bei {key}: {e}")
                 error_count += 1
         
-        print(f"\n📊 Ergebnis: {success_count} erfolgreich, {error_count} Fehler")
+        print(f"\n📊 Ergebnis: {success_count} verarbeitet, {actual_changes} echte Änderungen, {error_count} Fehler")
         
-        # Restart PipeWire nach ALLEN Änderungen
-        if success_count > 0:
+        # Restart PipeWire NUR wenn _restart=true
+        if actual_changes > 0 and restart_pw:
+            print("🔄 Starte PipeWire neu...")
             restart_pipewire()
+        elif actual_changes > 0:
+            print("ℹ Änderungen gespeichert, aber PipeWire wird NICHT neu gestartet")
+        else:
+            print("ℹ Keine echten Änderungen")
         
         return jsonify({
             'status': 'ok' if error_count == 0 else 'partial',
-            'message': f'{success_count} Änderungen gespeichert' + (f', {error_count} Fehler' if error_count > 0 else ''),
+            'message': f'{actual_changes} Änderungen angewendet' + (f', {error_count} Fehler' if error_count > 0 else ''),
             'success': success_count,
+            'changes': actual_changes,
             'errors': error_count
         })
     except Exception as e:
