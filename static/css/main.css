@@ -1,15 +1,27 @@
-:root{
+.theme-light{
     --bg-1: #f6f8fb;
     --bg-2: #eef4fa;
     --card: #ffffff;
     --muted: #6b7280;
     --accent-1: #3c5faa;
-    /*--accent-1: #214daf;*/
     --accent-2: #06b6d4;
     --danger: #d63031;
     --danger-2: #ff6348;
     --shadow-strong: rgba(0,0,0,0.18);
     --shadow-soft: rgba(0,0,0,0.08);
+}
+
+.theme-dark{
+    --bg-1: #0f172a;
+    --bg-2: #1a2847;
+    --card: #1e293b;
+    --muted: #94a3b8;
+    --accent-1: #56759a;
+    --accent-2: #8da8ad;
+    --danger: #d54848;
+    --danger-2: #f07c7c;
+    --shadow-strong: rgba(0,0,0,0.4);
+    --shadow-soft: rgba(0,0,0,0.2);
 }
 
 * {
@@ -85,6 +97,10 @@ h1 {
     transition: all 0.3s ease;
     border: 2px solid rgba(15,23,42,0.08);
     box-shadow: 0 8px 26px var(--shadow-soft);
+}
+
+.theme-dark .eq-band {
+    background: none;
 }
 
 .eq-band:hover {
@@ -289,6 +305,10 @@ button {
     border: 1px solid rgba(15,23,42,0.03);
 }
 
+.theme-dark .preset-section {
+    background: none;
+}
+
 .preset-section h3 {
     color: #0f172a;
     margin-bottom: 15px;
@@ -323,6 +343,10 @@ button {
     line-height: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.theme-dark .btn-preset {
+    background: none;
 }
 
 .btn-preset .material-icons {

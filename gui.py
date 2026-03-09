@@ -14,11 +14,80 @@ config = json.loads(open('config.json', 'r').read())
 site_config = config['site_config']
 
 app = Flask(__name__, template_folder='templates')
-CONFIG_FILE = os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
 
 # Neuer Backup-Ordner & Limit
 BACKUP_DIR = os.path.expanduser("~/.local/share/pipewire/backups")
 MAX_BACKUPS = 10
+
+# Mapping: node.description -> config file
+CONFIG_MAPPING = {
+    "Pipewire Gold Standard Audio": "sink-eq10-wide.conf",
+    "Pipewire Gold (5.1) Audio": "sink-eq10-5.1.conf"
+}
+
+def get_active_config_file():
+    """Ermittelt die aktuell in PipeWire geladene .config basierend auf node.description"""
+    try:
+        # Hole den aktuellen Standard-Sink mit wpctl status
+        wpctl_status = subprocess.run(
+            "wpctl status | grep '*' | awk '{print $3}' | tr -d '.'",
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if wpctl_status.returncode != 0:
+            print("⚠ wpctl status Fehler, verwende Fallback: sink-eq10-wide.conf")
+            return os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
+        
+        sink_id_raw = wpctl_status.stdout.strip().split('\n')[0] if wpctl_status.stdout.strip() else None
+        
+        if not sink_id_raw:
+            print("⚠ Kein aktiver Sink gefunden, verwende Fallback: sink-eq10-wide.conf")
+            return os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
+        
+        # Hole node.description für diesen Sink
+        wpctl_inspect = subprocess.run(
+            f"wpctl inspect {sink_id_raw}",
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if wpctl_inspect.returncode != 0:
+            print(f"⚠ wpctl inspect {sink_id_raw} fehlgeschlagen, verwende Fallback")
+            return os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
+        
+        # Extrahiere node.description
+        description_match = re.search(r'node\.description = "([^"]+)"', wpctl_inspect.stdout)
+        
+        if not description_match:
+            print("⚠ node.description nicht gefunden, verwende Fallback")
+            return os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
+        
+        node_description = description_match.group(1)
+        print(f"✓ Erkannte node.description: '{node_description}'")
+        
+        # Mappe auf config file
+        if node_description in CONFIG_MAPPING:
+            config_file = CONFIG_MAPPING[node_description]
+            full_path = os.path.expanduser(f"~/.config/pipewire/pipewire.conf.d/{config_file}")
+            print(f"✓ Verwende Config: {config_file}")
+            return full_path
+        else:
+            print(f"⚠ node.description '{node_description}' nicht im Mapping, verwende Fallback")
+            return os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
+    
+    except Exception as e:
+        print(f"✗ Fehler beim Ermitteln der Config: {e}")
+        import traceback
+        traceback.print_exc()
+        return os.path.expanduser("~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf")
+
+# Initialisiere CONFIG_FILE beim Start
+CONFIG_FILE = get_active_config_file()
 
 def make_backup():
     os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -43,6 +112,10 @@ def make_backup():
 
 def get_gains():
     """Liest die aktuellen EQ-Werte (Gain und Q) aus der Config-Datei"""
+    # Aktualisiere CONFIG_FILE bei jedem Aufruf
+    global CONFIG_FILE
+    CONFIG_FILE = get_active_config_file()
+    
     if not os.path.exists(CONFIG_FILE):
         print(f"Fehler: Config-Datei nicht gefunden: {CONFIG_FILE}")
         return {}
@@ -52,26 +125,37 @@ def get_gains():
             content = f.read()
         
         gains = {}
+        
+        # Erkenne ob Stereo (ohne _L/_R) oder 5.1 (mit _L/_R)
+        is_5_1 = 'eq_band_1_L' in content
+        
         for i in range(1, 11):
+            if is_5_1:
+                # 5.1 Config: Lese nur den linken Kanal (_L)
+                band_name = f"eq_band_{i}_L"
+            else:
+                # Stereo Config: Standard naming
+                band_name = f"eq_band_{i}"
+            
             # Lese Gain
-            gain_pattern = f'name = "eq_band_{i}"[^}}]*?Gain = ([\\d.-]+)'
+            gain_pattern = f'name = "{band_name}"[^}}]*?Gain = ([\\d.-]+)'
             gain_match = re.search(gain_pattern, content)
             if gain_match:
                 gains[f'band_{i}'] = float(gain_match.group(1))
-                print(f"✓ Band {i} Gain: {gains[f'band_{i}']}")
+                print(f"✓ {band_name} Gain: {gains[f'band_{i}']}")
             else:
                 gains[f'band_{i}'] = 0.0
-                print(f"✗ Band {i} Gain nicht gefunden (default: 0.0)")
+                print(f"✗ {band_name} Gain nicht gefunden (default: 0.0)")
             
             # Lese Q
-            q_pattern = f'name = "eq_band_{i}"[^}}]*?Q = ([\\d.-]+)'
+            q_pattern = f'name = "{band_name}"[^}}]*?Q = ([\\d.-]+)'
             q_match = re.search(q_pattern, content)
             if q_match:
                 gains[f'band_{i}_q'] = float(q_match.group(1))
-                print(f"✓ Band {i} Q: {gains[f'band_{i}_q']}")
+                print(f"✓ {band_name} Q: {gains[f'band_{i}_q']}")
             else:
                 gains[f'band_{i}_q'] = 1.0
-                print(f"✗ Band {i} Q nicht gefunden (default: 1.0)")
+                print(f"✗ {band_name} Q nicht gefunden (default: 1.0)")
         
         return gains
     except Exception as e:
@@ -91,40 +175,56 @@ def update_gain(band, value, create_backup=True):
         
         print(f"\nVerarbeite: {band} Gain = {value}")
         
-        # Pattern für Gain
-        old_pattern = f'(name = "{band}"[^}}]*?Gain = )([\\d.-]+)'
-        current_match = re.search(old_pattern, content)
+        # Erkenne ob Stereo oder 5.1
+        is_5_1 = 'eq_band_1_L' in content
         
-        if not current_match:
-            raise Exception(f"Gain-Pattern für {band} nicht gefunden")
-        
-        current_value = float(current_match.group(2))
-        
-        # Wenn Wert gleich: keine Änderung
-        if abs(current_value - float(value)) < 1e-6:
-            print(f"  ℹ Gain ist bereits {current_value} — keine Änderung nötig")
-            return False
-        
-        # Erstelle Backup NUR wenn create_backup=True
-        if create_backup:
-            backup_file = make_backup()
-            print(f"✓ Backup erstellt: {backup_file}")
+        # Bestimme die zu ändernden Band-Namen
+        if is_5_1:
+            band_names = [f"{band}_L", f"{band}_R"]
         else:
-            print(f"ℹ Kein Backup (Auto-Save)")
+            band_names = [band]
         
-        # Ersetze Gain
-        new_content = re.sub(old_pattern, rf'\g<1>{value}', content)
-        if new_content == content:
-            raise Exception(f"Substitution für {band} fehlgeschlagen")
+        backup_created = False
+        content_modified = False
         
-        print(f"  ✓ Gain aktualisiert: {current_value} → {value}")
+        for band_name in band_names:
+            # Pattern für Gain
+            old_pattern = f'(name = "{band_name}"[^}}]*?Gain = )([\\d.-]+)'
+            current_match = re.search(old_pattern, content)
+            
+            if not current_match:
+                print(f"  ⚠ Gain-Pattern für {band_name} nicht gefunden")
+                continue
+            
+            current_value = float(current_match.group(2))
+            
+            # Wenn Wert gleich: überspringen
+            if abs(current_value - float(value)) < 1e-6:
+                print(f"  ℹ {band_name} Gain ist bereits {current_value}")
+                continue
+            
+            # Backup NUR beim ersten Mal
+            if not backup_created and create_backup:
+                backup_file = make_backup()
+                print(f"✓ Backup erstellt: {backup_file}")
+                backup_created = True
+            else:
+                print(f"ℹ Kein Backup (Auto-Save)")
+            
+            # Ersetze Gain
+            content = re.sub(old_pattern, rf'\g<1>{value}', content)
+            print(f"  ✓ {band_name} Gain aktualisiert: {current_value} → {value}")
+            content_modified = True
         
-        # Schreibe neue Config
-        with open(CONFIG_FILE, 'w') as f:
-            f.write(new_content)
-        print(f"  ✓ Datei gespeichert")
-        
-        return True
+        if content_modified:
+            # Schreibe neue Config
+            with open(CONFIG_FILE, 'w') as f:
+                f.write(content)
+            print(f"  ✓ Datei gespeichert")
+            return True
+        else:
+            print(f"  ℹ Keine Änderungen vorgenommen")
+            return False
         
     except Exception as e:
         print(f"  ✗ FEHLER: {e}")
@@ -143,44 +243,56 @@ def update_q(band, value, create_backup=True):
         
         print(f"\nVerarbeite: {band} Q = {value}")
         
-        # Pattern für Q
-        old_pattern = f'(name = "{band}"[^}}]*?Q = )([\\d.-]+)'
-        current_match = re.search(old_pattern, content)
+        # Erkenne ob Stereo oder 5.1
+        is_5_1 = 'eq_band_1_L' in content
         
-        if not current_match:
-            print(f"  ✗ Q-Pattern für {band} nicht gefunden!")
-            for line in content.split('\n'):
-                if band in line:
-                    print(f"  Zeile: {line}")
-            raise Exception(f"Q-Pattern für {band} nicht gefunden")
-        
-        current_value = float(current_match.group(2))
-        
-        # Wenn Wert gleich: keine Änderung
-        if abs(current_value - float(value)) < 1e-6:
-            print(f"  ℹ Q ist bereits {current_value} — keine Änderung nötig")
-            return False
-        
-        # Erstelle Backup NUR wenn create_backup=True
-        if create_backup:
-            backup_file = make_backup()
-            print(f"✓ Backup erstellt: {backup_file}")
+        # Bestimme die zu ändernden Band-Namen
+        if is_5_1:
+            band_names = [f"{band}_L", f"{band}_R"]
         else:
-            print(f"ℹ Kein Backup (Auto-Save)")
+            band_names = [band]
         
-        # Ersetze Q
-        new_content = re.sub(old_pattern, rf'\g<1>{value}', content)
-        if new_content == content:
-            raise Exception(f"Q-Substitution für {band} fehlgeschlagen")
+        backup_created = False
+        content_modified = False
         
-        print(f"  ✓ Q aktualisiert: {current_value} → {value}")
+        for band_name in band_names:
+            # Pattern für Q
+            old_pattern = f'(name = "{band_name}"[^}}]*?Q = )([\\d.-]+)'
+            current_match = re.search(old_pattern, content)
+            
+            if not current_match:
+                print(f"  ⚠ Q-Pattern für {band_name} nicht gefunden")
+                continue
+            
+            current_value = float(current_match.group(2))
+            
+            # Wenn Wert gleich: überspringen
+            if abs(current_value - float(value)) < 1e-6:
+                print(f"  ℹ {band_name} Q ist bereits {current_value}")
+                continue
+            
+            # Backup NUR beim ersten Mal
+            if not backup_created and create_backup:
+                backup_file = make_backup()
+                print(f"✓ Backup erstellt: {backup_file}")
+                backup_created = True
+            else:
+                print(f"ℹ Kein Backup (Auto-Save)")
+            
+            # Ersetze Q
+            content = re.sub(old_pattern, rf'\g<1>{value}', content)
+            print(f"  ✓ {band_name} Q aktualisiert: {current_value} → {value}")
+            content_modified = True
         
-        # Schreibe neue Config
-        with open(CONFIG_FILE, 'w') as f:
-            f.write(new_content)
-        print(f"  ✓ Datei gespeichert")
-        
-        return True
+        if content_modified:
+            # Schreibe neue Config
+            with open(CONFIG_FILE, 'w') as f:
+                f.write(content)
+            print(f"  ✓ Datei gespeichert")
+            return True
+        else:
+            print(f"  ℹ Keine Änderungen vorgenommen")
+            return False
         
     except Exception as e:
         print(f"  ✗ FEHLER: {e}")
