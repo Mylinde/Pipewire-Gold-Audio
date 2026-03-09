@@ -16,7 +16,7 @@ let currentGains = {};
 let saveTimeout;
 
 async function initializeEQ() {
-    console.log("🎵 Initialisiere EQ Editor...");
+    console.log("Initialisiere EQ Editor...");
     
     try {
         const response = await fetch('/api/gains');
@@ -58,7 +58,7 @@ async function initializeEQ() {
 }
 
 function renderEQ() {
-    console.log("🎨 Rendere EQ mit Gains:", currentGains);
+    console.log("Rendere EQ mit Gains:", currentGains);
     
     const grid = document.getElementById('eqGrid');
     grid.innerHTML = '';
@@ -120,13 +120,13 @@ function onSliderInput(bandId) {
         valueDisplay.textContent = parseFloat(gainSlider.value).toFixed(1) + ' dB';
         currentGains[bandId] = parseFloat(gainSlider.value);
     }
-    showStatus('⏳ Wert geändert (wird beim Loslassen gespeichert)...', 'info');
+    showStatus('Wert geändert (wird beim Loslassen gespeichert)...', 'info');
 }
 
 function onSliderEnd(bandId) {
     // Wird aufgerufen wenn User Slider loslässt (mouseup/touchend)
-    console.log(`📤 Slider-Ende für ${bandId}: Speichere und starte PipeWire neu`);
-    showStatus('⏳ Speichere Änderungen...', 'info');
+    console.log(`Slider-Ende für ${bandId}: Speichere und starte PipeWire neu`);
+    showStatus('Speichere Änderungen...', 'info');
     
     const data = {};
     bands.forEach(band => {
@@ -165,18 +165,18 @@ function onQSliderChange(bandId) {
         currentGains[`${bandId}_q`] = parseFloat(qSlider.value);
     }
     
-    showStatus('⏳ Speichere Änderungen...', 'info');
+    showStatus('Speichere Änderungen...', 'info');
     
     // Debounce: speichere nach 500ms Inaktivität
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
-        console.log(`📝 Auto-Save für ${bandId}_q`);
+        console.log(`Auto-Save für ${bandId}_q`);
         saveChanges();
     }, 500);
 }
 
 async function saveChanges() {
-    console.log("💾 Speichere Änderungen (Auto-Save)...");
+    console.log("Speichere Änderungen (Auto-Save)...");
     const data = {};
     
     // Sammle alle Slider-Werte
@@ -208,8 +208,8 @@ async function saveChanges() {
 }
 
 async function applyChangesWithRestart() {
-    showStatus('⏳ Speichere Änderungen und starte PipeWire neu...', 'info');
-    console.log("💾 Speichere Änderungen mit Restart:", currentGains);
+    showStatus('Speichere Änderungen und starte PipeWire neu...', 'info');
+    console.log("Speichere Änderungen mit Restart:", currentGains);
 
     try {
         const data = { ...currentGains };
@@ -240,8 +240,8 @@ async function applyChangesWithRestart() {
 }
 
 async function applyChanges() {
-    showStatus('⏳ Speichere Änderungen...', 'info');
-    console.log("💾 Speichere Änderungen (manuell):", currentGains);
+    showStatus('Speichere Änderungen...', 'info');
+    console.log("Speichere Änderungen (manuell):", currentGains);
 
     try {
         const data = { ...currentGains };
@@ -313,7 +313,7 @@ function loadPreset(preset) {
 
 function restorePipeWire() {
     if (confirm('PipeWire neu starten? (Audioausfall für ~2 Sekunden)')) {
-        showStatus('⏳ Starte PipeWire neu...', 'info');
+        showStatus('Starte PipeWire neu...', 'info');
         fetch('/api/restart', { method: 'POST' })
             .then(response => response.json())
             .then(data => {

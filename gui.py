@@ -89,7 +89,7 @@ def update_gain(band, value, create_backup=True):
         with open(CONFIG_FILE, 'r') as f:
             content = f.read()
         
-        print(f"\n📝 Verarbeite: {band} Gain = {value}")
+        print(f"\nVerarbeite: {band} Gain = {value}")
         
         # Pattern für Gain
         old_pattern = f'(name = "{band}"[^}}]*?Gain = )([\\d.-]+)'
@@ -141,7 +141,7 @@ def update_q(band, value, create_backup=True):
         with open(CONFIG_FILE, 'r') as f:
             content = f.read()
         
-        print(f"\n📝 Verarbeite: {band} Q = {value}")
+        print(f"\nVerarbeite: {band} Q = {value}")
         
         # Pattern für Q
         old_pattern = f'(name = "{band}"[^}}]*?Q = )([\\d.-]+)'
@@ -191,7 +191,7 @@ def update_q(band, value, create_backup=True):
 def restart_pipewire():
     """Startet PipeWire sauber neu"""
     try:
-        print("\n🔄 Starte PipeWire neu...")
+        print("\nStarte PipeWire neu...")
         
         # Stoppe
         subprocess.run(['systemctl', '--user', 'stop', 'pipewire'], capture_output=True, timeout=5)
@@ -217,7 +217,7 @@ def restart_pipewire():
 def index():
     try:
         gains = get_gains()
-        print(f"\n📊 Sende Gains an Frontend: {gains}")
+        print(f"\nSende Gains an Frontend: {gains}")
         return render_template('eq.html', gains=json.dumps(gains))
     except Exception as e:
         print(f"✗ Fehler in index(): {e}")
@@ -230,7 +230,7 @@ def get_gains_api():
     """API-Endpoint zum Abrufen der Gains und Q-Werte"""
     try:
         gains = get_gains()
-        print(f"\n📊 /api/gains gibt zurück: {gains}")
+        print(f"\n/api/gains gibt zurück: {gains}")
         return jsonify(gains)
     except Exception as e:
         print(f"✗ Fehler in /api/gains: {e}")
@@ -247,7 +247,7 @@ def update():
         restart_pw = data.pop('_restart', False)
         
         print(f"\n{'='*60}")
-        print(f"📝 UPDATE-REQUEST erhalten (Backup: {create_backup}, Restart: {restart_pw})")
+        print(f"UPDATE-REQUEST erhalten (Backup: {create_backup}, Restart: {restart_pw})")
         print(f"{'='*60}")
         print(f"Daten: {data}")
         
@@ -300,11 +300,11 @@ def update():
                 print(f"✗ Fehler bei {key}: {e}")
                 error_count += 1
         
-        print(f"\n📊 Ergebnis: {success_count} verarbeitet, {actual_changes} echte Änderungen, {error_count} Fehler")
+        print(f"\nErgebnis: {success_count} verarbeitet, {actual_changes} echte Änderungen, {error_count} Fehler")
         
         # Restart PipeWire NUR wenn _restart=true
         if actual_changes > 0 and restart_pw:
-            print("🔄 Starte PipeWire neu...")
+            print("Starte PipeWire neu...")
             restart_pipewire()
         elif actual_changes > 0:
             print("ℹ Änderungen gespeichert, aber PipeWire wird NICHT neu gestartet")
@@ -377,16 +377,16 @@ if __name__ == "__main__":
         WSGIApplication(app).run(**options)
     else:
         print("="*60)
-        print("🎵 PipeWire EQ Editor Server")
+        print("PipeWire EQ Editor Server")
         print("="*60)
-        print(f"📁 Config-Datei: {CONFIG_FILE}")
+        print(f"Config-Datei: {CONFIG_FILE}")
         print(f"✓ Existiert: {os.path.exists(CONFIG_FILE)}")
-        print(f"📊 Aktuelle Gains und Q-Werte:")
+        print(f"Aktuelle Gains und Q-Werte:")
         gains = get_gains()
         for key, value in sorted(gains.items()):
             print(f"   {key}: {value}")
         print("="*60)
-        print("🌐 Server läuft auf: http://127.0.0.1:1338")
+        print("Server läuft auf: http://127.0.0.1:1338")
         print("="*60 + "\n")
         
         app.run(debug=True, host='127.0.0.1', port=1338)
