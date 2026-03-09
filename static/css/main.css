@@ -1,13 +1,12 @@
-
 :root{
     --bg-1: #f6f8fb;
     --bg-2: #eef4fa;
     --card: #ffffff;
     --muted: #6b7280;
-    --accent-1: #214daf; /* primary blue */
-    --accent-2: #06b6d4; /* cyan */
-    --danger: #e42727;
-    --danger-2: #ed6262;
+    --accent-1: #214daf;
+    --accent-2: #06b6d4;
+    --danger: #d63031;
+    --danger-2: #ff6348;
     --shadow-strong: rgba(0,0,0,0.18);
     --shadow-soft: rgba(0,0,0,0.08);
 }
@@ -58,6 +57,7 @@ h1 {
     color: #0f172a;
     margin-bottom: 10px;
     font-size: 2em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .subtitle {
@@ -85,7 +85,7 @@ h1 {
 }
 
 .eq-band:hover {
-    background: linear-gradient(180deg, rgba(37,99,235,0.02), rgba(37,99,235,0.06));
+    background: linear-gradient(180deg, rgba(37,99,235,0.02), rgba(37,99,235,0.04));
     border-color: var(--accent-1,0.08);
     box-shadow: 0 10px 30px rgba(37,99,235,0.08);
     transform: translate(2px,-2px);            
@@ -96,6 +96,7 @@ h1 {
     color: #0f172a;
     margin-bottom: 8px;
     font-size: 1.1em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .band-freq {
@@ -163,10 +164,14 @@ input[type="range"]::-moz-range-thumb {
     min-width: 50px;
     margin-top: 5px;
     text-align: center;
+    text-shadow: 0 1px 3px rgba(33, 77, 175, 0.08);
 }
 
 input[type="range"]:hover ~ .value-display {
-    color:var(--accent-2);    
+    color: var(--accent-2);
+    transform: scale(1.1) translate(-2px, 2px);
+    text-shadow: 0 8px 20px rgba(37,99,235,0.12);
+    transition: all 0.2s ease;
 }
 
 .band-range {
@@ -195,6 +200,7 @@ button {
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .btn-primary {
@@ -327,13 +333,13 @@ button {
 }
 
 .info-box {
-    background: linear-gradient(180deg, rgba(6,182,212,0.03), rgba(255,255,255,0.4));
+    background: linear-gradient(180deg, rgba(37,99,235,0.01), rgba(37,99,235,0.02));
     padding: 15px;
     margin-bottom: 20px;
     border-radius: 8px;
     color: var(--muted);
     font-size: 1.0em;
-    border: 1px solid rgba(6,182,212,0.06);
+    border: 1px solid rgba(37,99,235,0.03);
 }
 
 .loading {
@@ -381,18 +387,10 @@ button {
     }
 }
 
-.material-icons {
-    font-size: 20px;
-    vertical-align: middle;
-    margin-right: 8px;
-    color: var(--accent-1);            
-    position: relative;
-}
-
 .material-icons-round {
     font-size: 20px;
     vertical-align: middle;
     margin-right: 8px;
-    top: -0.06em;              
+    top: -0.04em;              
     position: relative;
 }
