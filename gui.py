@@ -89,6 +89,10 @@ def get_active_config_file():
 # Initialisiere CONFIG_FILE beim Start
 CONFIG_FILE = get_active_config_file()
 
+# Füge diese Variablen nach CONFIG_FILE ein:
+LAST_CONFIG_CHECK = time.time()
+LAST_CONFIG_FILE = CONFIG_FILE
+
 def make_backup():
     os.makedirs(BACKUP_DIR, exist_ok=True)
     base = os.path.basename(CONFIG_FILE)
@@ -445,6 +449,40 @@ def restart():
     except Exception as e:
         print(f"✗ Fehler in /api/restart: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/config-info', methods=['GET'])
+def config_info():
+    """API-Endpoint zur Prüfung ob Config sich geändert hat"""
+    try:
+        global CONFIG_FILE, LAST_CONFIG_CHECK, LAST_CONFIG_FILE
+        
+        current_time = time.time()
+        config_changed = False
+        
+        # Prüfe ob Config sich geändert hat (mit Caching - nur alle 1 Sekunde)
+        if current_time - LAST_CONFIG_CHECK > 1:
+            new_config = get_active_config_file()
+            LAST_CONFIG_CHECK = current_time
+            
+            if new_config != CONFIG_FILE:
+                print(f"\n🔄 CONFIG WECHSEL ERKANNT!")
+                print(f"   Alt: {CONFIG_FILE}")
+                print(f"   Neu: {new_config}")
+                CONFIG_FILE = new_config
+                config_changed = True
+        
+        config_name = os.path.basename(CONFIG_FILE)
+        
+        return jsonify({
+            'status': 'ok',
+            'config_file': config_name,
+            'changed': config_changed
+        })
+    except Exception as e:
+        print(f"✗ Fehler in /api/config-info: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.errorhandler(404)
 def not_found(error):

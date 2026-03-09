@@ -14,6 +14,8 @@ const bands = [
 const originalGains = {};
 let currentGains = {};
 let saveTimeout;
+let currentConfig = null;
+let configCheckInterval = null;
 
 async function initializeEQ() {
     console.log("Initialisiere EQ Editor...");
@@ -37,6 +39,9 @@ async function initializeEQ() {
         renderEQ();
         
         showStatus('✓ Konfiguration erfolgreich geladen!', 'success');
+        
+        // Starte Config-Polling
+        startConfigPolling();
         
     } catch (error) {
         console.error("✗ Fehler beim Laden:", error);
@@ -336,5 +341,29 @@ function showStatus(message, type) {
     }, 3000);
 }
 
+// Prüft alle 2 Sekunden ob die Config gewechselt hat
+function startConfigPolling() {
+    configCheckInterval = setInterval(async () => {
+        try {
+            const response = await fetch('/api/config-info');
+            const data = await response.json();
+            
+            if (data.status === 'ok' && data.changed) {
+                console.log(`🔄 Config changed detected! Reloading...`);
+                location.reload();
+            }
+        } catch (error) {
+            console.error("Config polling error:", error);
+        }
+    }, 2000);
+}
+
 // Initialisiere beim Laden
 window.addEventListener('load', initializeEQ);
+
+// Cleanup bei Seitenverlauf
+window.addEventListener('beforeunload', () => {
+    if (configCheckInterval) {
+        clearInterval(configCheckInterval);
+    }
+});
