@@ -1,10 +1,18 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#181818" media="(prefers-color-scheme:dark)"/>
+    <meta name="theme-color" content="#f6f8fb" media="(prefers-color-scheme:light)"/>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='js/manifest.json') }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-title" content="PipeWire EQ">
+    
     <title>PipeWire Gold Audio EQ Editor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.min.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/round.min.css') }}" />
@@ -61,6 +69,17 @@
         <div class="status-message" id="statusMessage"></div>
     </div>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/theme-toggler.min.js') }}"></script>		
+    <script src="{{ url_for('static', filename='js/theme-toggler.min.js') }}"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register("{{ url_for('static', filename='js/serviceworker.js') }}")
+                    .then(reg => console.log('✓ Service Worker registered'))
+                    .catch(err => console.error('✗ Service Worker registration failed:', err));
+            });
+        }
+    </script>
 </body>
 </html>

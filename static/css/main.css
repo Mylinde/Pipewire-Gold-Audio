@@ -16,10 +16,10 @@
     --bg-2: #1a2847;
     --card: #1e293b;
     --muted: #94a3b8;
-    --accent-1: #56759a;
-    --accent-2: #8da8ad;
-    --danger: #d54848;
-    --danger-2: #f07c7c;
+    --accent-1: #415a79;
+    --accent-2: #6d888d;
+    --danger: #993434;
+    --danger-2: #954949;
     --shadow-strong: rgba(0,0,0,0.4);
     --shadow-soft: rgba(0,0,0,0.2);
 }
@@ -34,19 +34,19 @@
     font-family: 'Material Icons Round';
     font-style: normal;
     font-weight: 400;
-    src: url('../static/fonts/material-icons-round.woff2') format('woff2');
+    src: url('/static/fonts/material-icons-round.woff2') format('woff2');
 }
 
 @font-face {
     font-family: 'Assistant';
     font-style: normal;
     font-weight: 400;
-    src: url('../static/fonts/assistant-v19-latin-regular.woff2') format('woff2');
+    src: url('/static/fonts/assistant-v19-latin-regular.woff2') format('woff2');
 }
 
 body {
     font-family: 'Assistant', sans-serif;
-    font-size: 1.0em;
+    font-size: 1.2em;
     background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
     min-height: 100vh;
     display: flex;
@@ -218,7 +218,7 @@ button {
     padding: 12px 30px;
     border: none;
     border-radius: 8px;
-    font-size: 1.0em;
+    font-size: 0.9em;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -366,7 +366,7 @@ button {
 }
 
 .info-box {
-    background: linear-gradient(180deg, rgba(37,99,235,0.01), rgba(37,99,235,0.02));
+    background: linear-gradient(180deg, rgba(37,99,235,0.02), rgba(37,99,235,0.04));
     padding: 15px;
     margin-bottom: 20px;
     border-radius: 8px;
