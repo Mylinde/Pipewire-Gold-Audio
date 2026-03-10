@@ -33,7 +33,7 @@ async function initializeEQ() {
         document.getElementById('controlsSection').style.display = 'flex';
         
         renderEQ();
-        showStatus('Configuration loaded successfully', 'success');
+        showStatus(_('Configuration loaded successfully'), 'success');
         startConfigPolling();
         
     } catch (error) {
@@ -49,7 +49,7 @@ async function initializeEQ() {
         document.getElementById('controlsSection').style.display = 'flex';
         
         renderEQ();
-        showStatus(`Error loading configuration: ${error.message}`, 'error');
+        showStatus(`${_('Error loading configuration')}: ${error.message}`, 'error');
     }
 }
 
@@ -66,7 +66,7 @@ function renderEQ() {
                 <div class="band-label">${band.label}</div>
                 <div class="band-freq">${band.freq}</div>
                 
-                <div class="slider-label">Gain (dB)</div>
+                <div class="slider-label">${_('Gain (dB)')}</div>
                 <div class="slider-container">
                     <input type="range" 
                            id="slider_${band.id}" 
@@ -81,7 +81,7 @@ function renderEQ() {
                     <div class="band-range">${band.gainMin} - ${band.gainMax} dB</div>
                 </div>
                 
-                <div class="slider-label">Q (Width)</div>
+                <div class="slider-label">${_('Q (Width)')}</div>
                 <div class="slider-container">
                     <input type="range" 
                            id="slider_${band.id}_q" 
@@ -112,12 +112,12 @@ function onSliderInput(bandId) {
         valueDisplay.textContent = parseFloat(gainSlider.value).toFixed(1) + ' dB';
         currentGains[bandId] = parseFloat(gainSlider.value);
     }
-    showStatus('Adjusting value (will save on release)', 'info');
+    showStatus(_('Adjusting value (will save on release)'), 'info');
 }
 
 function onSliderEnd(bandId) {
     // Called when user releases slider (mouseup/touchend)
-    showStatus('Saving changes...', 'info');
+    showStatus(_('Saving changes...'), 'info');
     
     const data = {};
     bands.forEach(band => {
@@ -138,9 +138,9 @@ function onSliderEnd(bandId) {
     .then(r => r.json())
     .then(result => {
         if (result.status === 'ok' || result.status === 'partial') {
-            showStatus('Changes applied', 'success');
+            showStatus(_('Changes applied'), 'success');
         } else {
-            showStatus(`Error: ${result.message}`, 'error');
+            showStatus(`_${result.message}`, 'error');
         }
     })
     .catch(error => showStatus(`Error: ${error.message}`, 'error'));
@@ -155,7 +155,7 @@ function onQSliderChange(bandId) {
         currentGains[`${bandId}_q`] = parseFloat(qSlider.value);
     }
     
-    showStatus('Saving changes...', 'info');
+    showStatus(_('Saving changes...'), 'info');
     
     // Debounce: save after 500ms inactivity
     clearTimeout(saveTimeout);
@@ -186,7 +186,7 @@ async function saveChanges() {
         const result = await response.json();
         
         if (result.status === 'ok' || result.status === 'partial') {
-            showStatus('Changes applied', 'success');
+            showStatus(_('Changes applied'), 'success');
         } else {
             showStatus(`Error: ${result.message}`, 'error');
         }
@@ -196,7 +196,7 @@ async function saveChanges() {
 }
 
 async function applyChangesWithRestart() {
-    showStatus('Saving changes and restarting PipeWire...', 'info');
+    showStatus(_('Saving changes and restarting PipeWire...'), 'info');
 
     try {
         const data = { ...currentGains };
@@ -222,7 +222,7 @@ async function applyChangesWithRestart() {
 }
 
 async function applyChanges() {
-    showStatus('Saving changes...', 'info');
+    showStatus(_('Saving changes...'), 'info');
 
     try {
         const data = { ...currentGains };
@@ -248,7 +248,7 @@ async function applyChanges() {
 }
 
 function resetAll() {
-    if (confirm('Reset all EQ values to default?')) {
+    if (confirm(_('Reset all EQ values to default?'))) {
         Object.keys(currentGains).forEach(key => {
             currentGains[key] = originalGains[key] || 0;
         });
@@ -258,7 +258,7 @@ function resetAll() {
 }
 
 function resetPreset() {
-    if (confirm('Restore last backup?')) {
+    if (confirm(_('Restore last backup?'))) {
         Object.assign(currentGains, originalGains);
         renderEQ();
         applyChangesWithRestart();
@@ -283,17 +283,17 @@ function loadPreset(preset) {
         });
         renderEQ();
         applyChanges();
-        showStatus(`Preset '${preset}' loaded`, 'success');
+        showStatus(`_${('Preset loaded')}`, 'success');
     }
 }
 
 function restorePipeWire() {
-    if (confirm('Restart PipeWire? (audio will be interrupted for ~2 seconds)')) {
-        showStatus('Restarting PipeWire...', 'info');
+    if (confirm(_('Restart PipeWire? (audio will be interrupted for ~2 seconds)'))) {
+        showStatus(_('Restarting PipeWire...'), 'info');
         fetch('/api/restart', { method: 'POST' })
             .then(response => response.json())
             .then(data => {
-                showStatus('PipeWire restarted', 'success');
+                showStatus(_('PipeWire restarted'), 'success');
             })
             .catch(error => {
                 showStatus(`Error: ${error.message}`, 'error');
@@ -336,3 +336,48 @@ window.addEventListener('beforeunload', () => {
         clearInterval(configCheckInterval);
     }
 });
+
+// Translations mapping for JavaScript
+const translations = {
+    'en': {
+        'Configuration loaded successfully': 'Configuration loaded successfully',
+        'Error loading configuration': 'Error loading configuration',
+        'Adjusting value (will save on release)': 'Adjusting value (will save on release)',
+        'Saving changes...': 'Saving changes...',
+        'Changes applied': 'Changes applied',
+        'Error': 'Error',
+        'Saving changes and restarting PipeWire...': 'Saving changes and restarting PipeWire...',
+        'Reset all EQ values to default?': 'Reset all EQ values to default?',
+        'Restore last backup?': 'Restore last backup?',
+        'Preset loaded': 'Preset loaded',
+        'Restart PipeWire? (audio will be interrupted for ~2 seconds)': 'Restart PipeWire? (audio will be interrupted for ~2 seconds)',
+        'PipeWire restarted': 'PipeWire restarted',
+        'Loading current configuration...': 'Loading current configuration...',
+        'Gain (dB)': 'Gain (dB)',
+        'Q (Width)': 'Q (Width)'
+    },
+    'de': {
+        'Configuration loaded successfully': 'Konfiguration erfolgreich geladen',
+        'Error loading configuration': 'Fehler beim Laden der Konfiguration',
+        'Adjusting value (will save on release)': 'Wert wird angepasst (speichert beim Loslassen)',
+        'Saving changes...': 'Speichere Änderungen...',
+        'Changes applied': 'Änderungen angewendet',
+        'Error': 'Fehler',
+        'Saving changes and restarting PipeWire...': 'Speichere Änderungen und starte PipeWire neu...',
+        'Reset all EQ values to default?': 'Alle EQ-Werte auf Standard zurücksetzen?',
+        'Restore last backup?': 'Letztes Backup wiederherstellen?',
+        'Preset loaded': 'Preset geladen',
+        'Restart PipeWire? (audio will be interrupted for ~2 seconds)': 'PipeWire neu starten? (Audio wird für ~2 Sekunden unterbrochen)',
+        'PipeWire restarted': 'PipeWire neu gestartet',
+        'Loading current configuration...': 'Lade aktuelle Konfiguration...',
+        'Gain (dB)': 'Verstärkung (dB)',
+        'Q (Width)': 'Q (Breite)'
+    }
+};
+
+// Get current language from HTML lang attribute
+const currentLanguage = document.documentElement.lang || 'en';
+
+function _(key) {
+    return translations[currentLanguage]?.[key] || key;
+}

@@ -1,0 +1,47 @@
+# German translations
+msgid ""
+msgstr ""
+"Language: de\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "PipeWire Gold Audio EQ Editor"
+msgstr "PipeWire Gold Audio EQ Editor"
+
+msgid "Adjust your audio settings in real-time"
+msgstr "Passe deine Audio-Einstellungen in Echtzeit an"
+
+msgid "Note:"
+msgstr "Hinweis:"
+
+msgid "Changes are saved immediately and PipeWire is restarted."
+msgstr "Änderungen werden sofort gespeichert und PipeWire wird neu gestartet."
+
+msgid "Presets"
+msgstr "Voreinstellungen"
+
+msgid "Music"
+msgstr "Musik"
+
+msgid "Podcast"
+msgstr "Podcast"
+
+msgid "Bright"
+msgstr "Hell"
+
+msgid "Warm"
+msgstr "Warm"
+
+msgid "Reset"
+msgstr "Zurücksetzen"
+
+msgid "Loading current configuration..."
+msgstr "Lade aktuelle Konfiguration..."
+
+msgid "Save changes"
+msgstr "Änderungen speichern"
+
+msgid "Reset all"
+msgstr "Alles zurücksetzen"
+
+msgid "Restart PipeWire"
+msgstr "PipeWire neu starten"

@@ -41,6 +41,8 @@ This project provides automated installation and configuration of PipeWire with 
 - **Multi-Channel Support** - Full support for Mono/Stereo/5.1 configurations
 - **Dark/Light Theme** - Automatically follows system preferences
 - **Auto-Reload on Config Switch** - GUI automatically reloads when default sink changes
+- **Multi-Language Support** - English & German with automatic browser detection
+- **PWA Ready** - Offline-capable web application
 
 ## Requirements
 
@@ -65,10 +67,22 @@ Install required Python packages:
 pip install -r requirements.txt
 ```
 
+Current dependencies:
+
+```
+Flask==3.0.0
+Werkzeug==3.0.1
+gunicorn==21.2.0
+Flask-Babel==4.0.0
+Babel==2.14.0
+Jinja2==3.1.2
+pytz==2024.1
+```
+
 Or install individually:
 
 ```bash
-pip install Flask gunicorn
+pip install Flask gunicorn Flask-Babel
 ```
 
 ## Installation
@@ -126,6 +140,8 @@ The script will:
 ├── gui.py                           # Web GUI server with dynamic config detection
 ├── gunicorn_config.py               # Gunicorn configuration
 ├── config.json                      # GUI configuration
+├── babel_config.py                  # Multi-language configuration
+├── requirements.txt                 # Python dependencies
 ├── README.md                        # This file
 ├── LICENSE                          # MIT License
 ├── pipewire.conf.d/
@@ -138,9 +154,12 @@ The script will:
 │   ├── css/
 │   │   ├── main.css                # Main stylesheet (Light/Dark theme)
 │   │   └── round.min.css           # Material Design icons
-│   └── js/
-│       ├── main.js                 # EQ editor logic with auto-config detection
-│       └── theme-toggler.min.js    # Light/Dark theme switcher
+│   ├── js/
+│   │   ├── main.js                 # EQ editor logic with auto-config detection
+│   │   ├── change-language.js      # Language auto-detection
+│   │   ├── serviceworker.js        # PWA service worker
+│   │   └── theme-toggler.min.js    # Light/Dark theme switcher
+│   └── manifest.json               # PWA manifest
 └── templates/
     └── eq.html                     # Web GUI interface
 ```
@@ -209,11 +228,39 @@ The project includes an interactive web-based EQ editor for real-time audio adju
 - **Automatic Config Detection**: Detects active PipeWire config via `node.description`
 - **Auto-Reload on Config Switch**: GUI automatically reloads when you change the default sink (via `wpctl set-default`)
 - **Multi-Channel Support**: Full support for 5.1 L/R channel synchronization
-- **Audio presets**: Music, Podcast, Bright, Warm
+- **Audio presets**: Music, Podcast, Bright, Warm, Reset
 - **Visual feedback**: Live value displays and status messages
 - **Automatic backups**: All changes are backed up to `~/.local/share/pipewire/backups/`
 - **Dark/Light Theme**: Automatically follows system preferences (respects `prefers-color-scheme`)
+- **Multi-Language UI**: English & Deutsch with automatic browser detection
+- **PWA Support**: Can be installed as standalone app
 - **Modern UI**: Responsive design with Material Design icons
+
+### Language Support
+
+The GUI supports multiple languages with automatic detection:
+
+**Supported Languages:**
+- 🇬🇧 English
+- 🇩🇪 Deutsch (German)
+
+**How language selection works:**
+
+1. **Auto-Detection** (first visit):
+   - Browser language is detected (e.g., `de-DE` → `de`)
+   - Page is automatically rendered in detected language
+   - Selection is saved to browser localStorage
+
+2. **URL Parameter**:
+   - Access specific language: `http://127.0.0.1:1338/?lang=de`
+   - Overrides browser language and saves to localStorage
+
+**Example:**
+```bash
+# German user opens GUI → automatically in German
+# User can access English via: http://127.0.0.1:1338/?lang=en
+# Page reloads and stays in English (localStorage)
+```
 
 ### Theme Support
 
@@ -223,9 +270,9 @@ The GUI automatically adapts to your system's color scheme preference:
 - **Dark Theme**: Dark interface optimized for low-light environments
 
 Supported in:
-- ✅ Linux (GNOME, KDE, X11, Wayland)
-- ✅ Firefox, Chrome, Safari
-- ✅ Respects system `prefers-color-scheme` setting
+- Linux (GNOME, KDE, X11, Wayland)
+- Firefox, Chrome, Safari
+- Respects system `prefers-color-scheme` setting
 
 **To change theme:**
 1. **System Setting**: Change your OS theme (Settings → Appearance)
@@ -354,7 +401,7 @@ Edit `config.json` to customize GUI behavior:
 {
   "site_config": {
     "title": "PipeWire Gold Audio EQ Editor",
-    "port": 5000,
+    "port": 1338,
     "host": "127.0.0.1"
   }
 }
@@ -377,10 +424,11 @@ All EQ changes are automatically backed up to:
 
 Available presets for quick EQ switching:
 
-- **🎵 Music** - Boosted bass and presence for music listening
-- **🎙️ Podcast** - Optimized for speech intelligibility
-- **✨ Bright** - Bright, detailed sound for analytical listening
-- **🔥 Warm** - Warm, smooth sound for casual listening
+- **Music** - Boosted bass and presence for music listening
+- **Podcast** - Optimized for speech intelligibility
+- **Bright** - Bright, detailed sound for analytical listening
+- **Warm** - Warm, smooth sound for casual listening
+- **Reset** - Revert to default configuration
 
 ## Automatically Configured Values
 
@@ -540,6 +588,27 @@ wpctl set-default <sink-id>
 # Then manually refresh browser (Ctrl+R or Cmd+R)
 ```
 
+### GUI Language Not Switching
+
+**Check browser localStorage:**
+```javascript
+// In browser DevTools Console:
+localStorage.getItem('language')
+
+// Clear language preference
+localStorage.removeItem('language')
+
+// Hard refresh browser (Ctrl+Shift+R)
+```
+
+**Check Flask-Babel configuration:**
+```bash
+# Verify translations exist
+ls -la translations/
+
+# Should show: en/, de/ directories with LC_MESSAGES/messages.po
+```
+
 ### 5.1 Config Band Values Not Reading
 
 Ensure bands have correct naming with `_L` and `_R` suffixes:
@@ -612,6 +681,17 @@ python3 -B -m gunicorn --config gunicorn_config.py gui:app
 python3 gui.py
 ```
 
+**Flask-Babel issues:**
+```bash
+# Make sure Flask-Babel is installed
+pip install Flask-Babel
+
+# Verify version
+pip show flask-babel
+
+# Should show: Version: 4.0.0
+```
+
 ## Customizing EQ Settings
 
 EQ bands can be adjusted in `sink-eq10-wide.conf` or through the web GUI:
@@ -630,10 +710,11 @@ EQ bands can be adjusted in `sink-eq10-wide.conf` or through the web GUI:
 1. Start the GUI: `python3 gui.py` or `python3 -B -m gunicorn --config gunicorn_config.py gui:app`
 2. Open **http://127.0.0.1:1338** in your browser
 3. GUI automatically detects active config
-4. Adjust sliders for Gain and Q values
-5. Click "Save Changes" to apply
-6. Changes are automatically backed up and PipeWire is restarted
-7. GUI remains open with updated values
+4. Language automatically selected (Browser → localStorage → default EN)
+5. Adjust sliders for Gain and Q values
+6. Click "Save changes" to apply
+7. Changes are automatically backed up and PipeWire is restarted
+8. GUI remains open with updated values
 
 ### Manual Editing
 
@@ -681,7 +762,18 @@ systemctl --user restart pipewire
 - **GUI requires restart**: EQ parameter changes via GUI trigger automatic PipeWire restart (~2 seconds of audio loss)
 - **5.1 detection**: GUI requires `_L` and `_R` suffixes for 5.1 channel detection. Standard configs without suffixes work as Stereo.
 - **Config polling interval**: 2-second polling may introduce slight delay in detecting config changes
+- **Language files**: Translation files must exist in `translations/` directory for multi-language support
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit improvements, bug reports, or new features.
 
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+**Last Updated:** 2026-03-10  
+**Version:** 1.0.0  
+**Status:** Stable ✅

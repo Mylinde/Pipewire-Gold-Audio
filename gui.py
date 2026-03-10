@@ -1,30 +1,37 @@
 #!/usr/bin/env python3
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
+from babel_config import create_babel, get_languages, get_locale, SUPPORTED_LANGUAGES
+from datetime import datetime
 import subprocess
 import re
 import json
 import os
 import shutil
-from datetime import datetime
 import time
 import argparse
 
+# Load config
 config = json.loads(open('config.json', 'r').read())
 site_config = config['site_config']
 
+# Initialize Flask
 app = Flask(__name__, template_folder='templates')
+app.secret_key = 'pipewire-eq-secret-key'
 
-# Backup directory and limit
+# Initialize Babel with custom config
+create_babel(app)
+
+# Configuration
 BACKUP_DIR = os.path.expanduser("~/.local/share/pipewire/backups")
 MAX_BACKUPS = 10
 
-# Mapping: node.description -> config file
 CONFIG_MAPPING = {
     "Pipewire Gold Standard Audio": "sink-eq10-wide.conf",
     "Pipewire Gold (5.1) Audio": "sink-eq10-5.1.conf"
 }
 
+# Helper functions
 def get_active_config_file():
     """Determine active PipeWire config based on node.description"""
     try:
@@ -231,50 +238,21 @@ def restart_pipewire():
     except Exception:
         return False
 
-def cleanup_duplicate_sinks():
-    """Remove duplicate audio sinks from PipeWire"""
+# Context processor to inject variables into templates
+@app.context_processor
+def inject_languages():
+    """Inject language info into all templates"""
     try:
-        # Get all sinks
-        wpctl_status = subprocess.run(
-            "wpctl status",
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
-        sinks = {}
-        for line in wpctl_status.stdout.split('\n'):
-            if 'Pipewire Gold' in line:
-                # Extract sink ID and name
-                parts = line.strip().split()
-                if len(parts) >= 2:
-                    sink_id = parts[0].strip('*.')
-                    sink_name = ' '.join(parts[2:])
-                    
-                    if sink_name not in sinks:
-                        sinks[sink_name] = []
-                    sinks[sink_name].append(sink_id)
-        
-        # Remove duplicates (keep the first one)
-        for sink_name, sink_ids in sinks.items():
-            if len(sink_ids) > 1:
-                for sink_id in sink_ids[1:]:
-                    subprocess.run(
-                        f"wpctl set-default {sink_ids[0]}",
-                        shell=True,
-                        capture_output=True,
-                        timeout=5
-                    )
-                    subprocess.run(
-                        f"pactl remove-sink-input {sink_id}",
-                        shell=True,
-                        capture_output=True,
-                        timeout=5
-                    )
-    except Exception:
-        pass
+        current_lang = session.get('language') or request.accept_languages.best_match(['en', 'de']) or 'en'
+    except:
+        current_lang = 'en'
+    
+    return dict(
+        supported_languages=SUPPORTED_LANGUAGES,
+        current_language=current_lang
+    )
 
+# API Routes
 @app.route('/')
 def index():
     try:
@@ -396,6 +374,35 @@ def config_info():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/api/change-language', methods=['POST'])
+def change_language_api():
+    """API endpoint to change language"""
+    try:
+        data = request.json
+        lang = data.get('language', 'en')
+        
+        if lang not in app.config.get('BABEL_LANGUAGES', ['en', 'de']):
+            return jsonify({'status': 'error', 'message': 'Unsupported language'}), 400
+        
+        session['language'] = lang
+        return jsonify({'status': 'ok', 'message': f'Language changed to {lang}'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/get-languages', methods=['GET'])
+def get_languages_api():
+    """API endpoint to get supported languages"""
+    try:
+        return get_languages()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get-locale', methods=['GET'])
+def get_current_locale():
+    """API endpoint to get current language"""
+    return get_locale()
+
+# Error handlers
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Not found'}), 404
@@ -408,7 +415,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start the server")
     parser.add_argument("-p", "--port", type=int, default=site_config["port"],
                         help="Port number (default: %(default)d)")
-    parser.add_argument("-b", "--host", default="0.0.0.0",
+    parser.add_argument("-b", "--host", default="127.0.0.1",
                         help="Host address (default: %(default)s)")
 
     arguments = parser.parse_args()
@@ -417,7 +424,7 @@ if __name__ == "__main__":
         run_with_gunicorn = True
         os.environ.pop("GUNICORN_ARGV")
         port = int(os.getenv("PORT", site_config["port"]))
-        host = os.getenv("HOST", "0.0.0.0")
+        host = os.getenv("HOST", "127.0.0.1")
     else:
         run_with_gunicorn = False
 

@@ -1,0 +1,43 @@
+{
+  "name": "PipeWire Gold Audio EQ Editor",
+  "short_name": "PipeWire EQ",
+  "description": "Real-time audio EQ editor for PipeWire",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#181818",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/img/music_note.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/static/img/screenshot.png",
+      "sizes": "540x605",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["music", "utilities"],
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Open EQ Editor",
+      "short_name": "EQ",
+      "description": "Open the audio EQ editor",
+      "url": "/?mode=eq",
+      "icons": [
+        {
+          "src": "/static/img/music_note.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
