@@ -374,34 +374,6 @@ def config_info():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route('/api/change-language', methods=['POST'])
-def change_language_api():
-    """API endpoint to change language"""
-    try:
-        data = request.json
-        lang = data.get('language', 'en')
-        
-        if lang not in app.config.get('BABEL_LANGUAGES', ['en', 'de']):
-            return jsonify({'status': 'error', 'message': 'Unsupported language'}), 400
-        
-        session['language'] = lang
-        return jsonify({'status': 'ok', 'message': f'Language changed to {lang}'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 400
-
-@app.route('/api/get-languages', methods=['GET'])
-def get_languages_api():
-    """API endpoint to get supported languages"""
-    try:
-        return get_languages()
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/get-locale', methods=['GET'])
-def get_current_locale():
-    """API endpoint to get current language"""
-    return get_locale()
-
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
