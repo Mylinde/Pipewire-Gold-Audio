@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from flask import Flask, render_template, request, jsonify, session
+from flask_babel import gettext
 from babel_config import create_babel, get_languages, get_locale, SUPPORTED_LANGUAGES
 from datetime import datetime
 import subprocess
@@ -24,6 +25,7 @@ create_babel(app)
 
 # Configuration
 BACKUP_DIR = os.path.expanduser("~/.local/share/pipewire/backups")
+BACKUP_LOCK_FILE = os.path.expanduser("~/.local/share/pipewire/backups/.backup_in_progress")
 MAX_BACKUPS = 10
 
 CONFIG_MAPPING = {
@@ -149,6 +151,9 @@ def update_gain(band, value, create_backup=True):
         is_5_1 = 'eq_band_1_L' in content
         band_names = [f"{band}_L", f"{band}_R"] if is_5_1 else [band]
         
+        # Round value to 1 decimal place for consistency
+        value = round(float(value), 1)
+        
         backup_created = False
         content_modified = False
         
@@ -159,9 +164,10 @@ def update_gain(band, value, create_backup=True):
             if not current_match:
                 continue
             
-            current_value = float(current_match.group(2))
+            current_value = round(float(current_match.group(2)), 1)
             
-            if abs(current_value - float(value)) < 1e-6:
+            # Only update if different
+            if current_value == value:
                 continue
             
             if not backup_created and create_backup:
@@ -193,6 +199,9 @@ def update_q(band, value, create_backup=True):
         is_5_1 = 'eq_band_1_L' in content
         band_names = [f"{band}_L", f"{band}_R"] if is_5_1 else [band]
         
+        # Round value to 2 decimal places for consistency
+        value = round(float(value), 2)
+        
         backup_created = False
         content_modified = False
         
@@ -203,9 +212,10 @@ def update_q(band, value, create_backup=True):
             if not current_match:
                 continue
             
-            current_value = float(current_match.group(2))
+            current_value = round(float(current_match.group(2)), 2)
             
-            if abs(current_value - float(value)) < 1e-6:
+            # Only update if different
+            if current_value == value:
                 continue
             
             if not backup_created and create_backup:
@@ -226,16 +236,19 @@ def update_q(band, value, create_backup=True):
         raise
 
 def restart_pipewire():
-    """Cleanly restart PipeWire service"""
+    """Cleanly restart PipeWire service via socket trigger"""
     try:
-        subprocess.run(['systemctl', '--user', 'stop', 'pipewire'], capture_output=True, timeout=5)
-        time.sleep(1)
-        
-        result = subprocess.run(['systemctl', '--user', 'start', 'pipewire'], capture_output=True, timeout=10)
+        result = subprocess.run(
+            ['systemctl', '--user', 'restart', 'pipewire.socket'],
+            capture_output=True,
+            timeout=5,
+            check=False
+        )
         time.sleep(2)
         
         return result.returncode == 0
-    except Exception:
+    except Exception as e:
+        print(f"Error restarting PipeWire: {e}")
         return False
 
 # Context processor to inject variables into templates
@@ -243,7 +256,7 @@ def restart_pipewire():
 def inject_languages():
     """Inject language info into all templates"""
     try:
-        current_lang = session.get('language') or request.accept_languages.best_match(['en', 'de']) or 'en'
+        current_lang = session.get('language') or request.accept_languages.best_match(['en', 'de', 'tr']) or 'en'
     except:
         current_lang = 'en'
     
@@ -273,6 +286,17 @@ def get_gains_api():
 @app.route('/api/update', methods=['POST'])
 def update():
     """API endpoint to update Gain and Q values"""
+    # Create lock file to prevent other operations during update
+    lock_created = False
+    try:
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        with open(BACKUP_LOCK_FILE, 'w') as f:
+            f.write('')
+        lock_created = True
+        print(f"[UPDATE] Lock file created: {BACKUP_LOCK_FILE}")
+    except Exception as e:
+        print(f"[UPDATE] FAILED to create lock file: {e}")
+    
     try:
         data = request.json
         
@@ -317,10 +341,11 @@ def update():
                 
                 success_count += 1
 
-            except Exception:
+            except Exception as ex:
                 error_count += 1
         
-        # Restart PipeWire only if _restart=true
+        print(f"[UPDATE] Changes: {actual_changes}, Restart requested: {restart_pw}")
+        # Restart PipeWire if _restart=true and changes were made
         if actual_changes > 0 and restart_pw:
             restart_pipewire()
         
@@ -332,12 +357,40 @@ def update():
             'errors': error_count
         })
     except Exception as e:
+        print(f"[UPDATE] Exception: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+    finally:
+        # Remove lock file when done
+        if lock_created:
+            try:
+                os.remove(BACKUP_LOCK_FILE)
+                print(f"[UPDATE] Lock file removed")
+            except Exception as e:
+                print(f"[UPDATE] FAILED to remove lock file: {e}")
+
+@app.route('/api/backup-status', methods=['GET'])
+def backup_status():
+    """API endpoint to check if backup is in progress"""
+    try:
+        is_backup_in_progress = os.path.exists(BACKUP_LOCK_FILE)
+        return jsonify({
+            'status': 'ok',
+            'backupInProgress': is_backup_in_progress
+        })
+    except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 @app.route('/api/restart', methods=['POST'])
 def restart():
     """API endpoint to restart PipeWire"""
     try:
+        # Check if backup is in progress
+        if os.path.exists(BACKUP_LOCK_FILE):
+            return jsonify({
+                'status': 'error',
+                'message': 'Backup in progress. Cannot restart during backup.'
+            }), 409
+        
         success = restart_pipewire()
         if success:
             return jsonify({'status': 'ok', 'message': 'PipeWire restarted'})
@@ -373,6 +426,150 @@ def config_info():
         })
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/backups', methods=['GET'])
+def list_backups():
+    """API endpoint to list available backups"""
+    try:
+        global CONFIG_FILE
+        
+        if not os.path.exists(BACKUP_DIR):
+            return jsonify({'status': 'ok', 'backups': []})
+        
+        base = os.path.basename(CONFIG_FILE)
+        files = [f for f in os.listdir(BACKUP_DIR) if f.startswith(base + ".backup_")]
+        files_paths = [os.path.join(BACKUP_DIR, f) for f in files]
+        
+        backups = []
+        for filepath in files_paths:
+            stat = os.stat(filepath)
+            mtime = datetime.fromtimestamp(stat.st_mtime)
+            backups.append({
+                'filename': os.path.basename(filepath),
+                'path': filepath,
+                'timestamp': mtime.strftime("%d.%m.%Y %H:%M:%S"),
+                'size': stat.st_size
+            })
+        
+        # Sort by modification time, newest first
+        backups.sort(key=lambda x: x['path'], reverse=True)
+        
+        return jsonify({
+            'status': 'ok',
+            'backups': backups
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/restore-backup', methods=['POST'])
+def restore_backup():
+    """API endpoint to restore a backup"""
+    # Create lock file to prevent service from being stopped during restore
+    try:
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        open(BACKUP_LOCK_FILE, 'a').close()
+    except Exception:
+        pass
+    
+    try:
+        global CONFIG_FILE
+        data = request.json
+        backup_filename = data.get('filename')
+        
+        if not backup_filename:
+            return jsonify({'status': 'error', 'message': 'No backup specified'}), 400
+        
+        backup_path = os.path.join(BACKUP_DIR, backup_filename)
+        
+        # Security check: ensure backup is in BACKUP_DIR
+        if not os.path.abspath(backup_path).startswith(os.path.abspath(BACKUP_DIR)):
+            return jsonify({'status': 'error', 'message': 'Invalid backup path'}), 400
+        
+        if not os.path.exists(backup_path):
+            return jsonify({'status': 'error', 'message': 'Backup file not found'}), 404
+        
+        # Create backup of current config before restoring
+        make_backup()
+        
+        # Restore the backup
+        shutil.copy2(backup_path, CONFIG_FILE)
+        
+        # Restart PipeWire
+        restart_pipewire()
+        
+        return jsonify({
+            'status': 'ok',
+            'message': 'Backup restored successfully'
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        # Remove lock file when done
+        try:
+            os.remove(BACKUP_LOCK_FILE)
+        except Exception:
+            pass
+
+@app.route('/api/translations', methods=['GET'])
+def get_translations():
+    """Get all translations for current language"""
+    translations = {
+        # Band Labels
+        'Bass Boost': gettext('Bass Boost'),
+        'Foundation': gettext('Foundation'),
+        'Warmth': gettext('Warmth'),
+        'Anti-Boxy': gettext('Anti-Boxy'),
+        'Anti-Nasal': gettext('Anti-Nasal'),
+        'Midrange': gettext('Midrange'),
+        'Anti-Plastic': gettext('Anti-Plastic'),
+        'Presence': gettext('Presence'),
+        'Brilliance': gettext('Brilliance'),
+        'Air': gettext('Air'),
+        
+        # Special Filters
+        'High-Pass Filter': gettext('High-Pass Filter'),
+        'De-Esser': gettext('De-Esser'),
+        'Final Gain': gettext('Final Gain'),
+        'Soft Limiter': gettext('Soft Limiter'),
+        'Frequency (Hz)': gettext('Frequency (Hz)'),
+        'Gain (dB)': gettext('Gain (dB)'),
+        'Gain (Factor)': gettext('Gain (Factor)'),
+        'Q (Sharpness)': gettext('Q (Sharpness)'),
+        'Q (Width)': gettext('Q (Width)'),
+        'Q (Response)': gettext('Q (Response)'),
+        'Removes low-frequency rumble and noise below the cutoff frequency.': gettext('Removes low-frequency rumble and noise below the cutoff frequency.'),
+        'Reduces sibilance and harsh high-frequency sounds in vocals and speech.': gettext('Reduces sibilance and harsh high-frequency sounds in vocals and speech.'),
+        'Tip: Keep below 1.2 to avoid clipping.': gettext('Tip: Keep below 1.2 to avoid clipping.'),
+        'Protects from digital clipping at high frequencies.': gettext('Protects from digital clipping at high frequencies.'),
+        
+        # Status Messages
+        'Configuration loaded successfully': gettext('Configuration loaded successfully'),
+        'Error loading configuration': gettext('Error loading configuration'),
+        'Adjusting value (will save on release)': gettext('Adjusting value (will save on release)'),
+        'Saving changes...': gettext('Saving changes...'),
+        'Changes applied': gettext('Changes applied'),
+        'Saving changes and restarting PipeWire...': gettext('Saving changes and restarting PipeWire...'),
+        'Reset all EQ values to default?': gettext('Reset all EQ values to default?'),
+        'Restore last backup?': gettext('Restore last backup?'),
+        'Preset loaded': gettext('Preset loaded'),
+        'Restart PipeWire? (audio will be interrupted for ~2 seconds)': gettext('Restart PipeWire? (audio will be interrupted for ~2 seconds)'),
+        'PipeWire restarted': gettext('PipeWire restarted'),
+        'Restarting PipeWire...': gettext('Restarting PipeWire...'),
+        
+        # Backup/Undo Translations
+        'Undo': gettext('Undo'),
+        'Restore Backup': gettext('Restore Backup'),
+        'Restore': gettext('Restore'),
+        'No backups available': gettext('No backups available'),
+        'Error loading backups': gettext('Error loading backups'),
+        'Restore this backup? Current configuration will be backed up.': gettext('Restore this backup? Current configuration will be backed up.'),
+        'Backup restored successfully': gettext('Backup restored successfully'),
+        'Error restoring backup': gettext('Error restoring backup'),
+        'Configuration reloaded': gettext('Configuration reloaded'),
+        'Restoring backup...': gettext('Restoring backup...'),
+    }
+    
+    return jsonify(translations)
 
 # Error handlers
 @app.errorhandler(404)

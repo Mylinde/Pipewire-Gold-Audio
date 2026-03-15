@@ -31,8 +31,8 @@ function getBrowserLanguage() {
     // Get browser language (first zwei chars, z.B. 'en', 'de')
     const browserLang = navigator.language.split('-')[0];
     
-    // Nur 'de' und 'en' unterstützen
-    return ['de', 'en'].includes(browserLang) ? browserLang : 'en';
+    // Nur 'de', 'en' und 'tr' unterstützen
+    return ['de', 'en', 'tr'].includes(browserLang) ? browserLang : 'en';
 }
 
 /**
@@ -40,7 +40,7 @@ function getBrowserLanguage() {
  */
 function changeLanguage(lang) {
     // Validate language
-    if (!['de', 'en'].includes(lang)) {
+    if (!['de', 'en', 'tr'].includes(lang)) {
         console.error('Unsupported language:', lang);
         return;
     }

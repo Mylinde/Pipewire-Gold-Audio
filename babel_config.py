@@ -3,11 +3,12 @@ from flask import request, session, jsonify
 from flask_babel import Babel, get_locale as babel_get_locale
 
 BABEL_DEFAULT_LOCALE = 'en'
-BABEL_LANGUAGES = ['en', 'de']
+BABEL_LANGUAGES = ['en', 'de', 'tr']
 
 SUPPORTED_LANGUAGES = {
     'en': 'English',
-    'de': 'Deutsch'
+    'de': 'Deutsch',
+    'tr': 'Türkçe'
 }
 
 def get_languages_from_dir(directory):

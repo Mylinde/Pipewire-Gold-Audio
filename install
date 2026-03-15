@@ -97,51 +97,148 @@ case "$1" in
         sed -i "s|target\.object = .*|target.object = \"$target_object\"|" ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
         sed -i "s|target\.object = .*|target.object = \"$target_object\"|" ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
 
-        echo "✓ Files installed"
-        echo "✓ HeSuVi paths adjusted for user: $current_user"
-        echo "✓ target.object updated: $target_object"
+        echo "✓ Konfigurationsdateien installiert"
+        echo "✓ HeSuVi-Pfade angepasst für Benutzer: $current_user"
+        echo "✓ target.object aktualisiert: $target_object"
+        
+        # GUI Installation
+        echo ""
+        echo "=== GUI-Installation ==="
+        gui_dir="$HOME/.local/share/pipewire"
+        mkdir -p "$gui_dir"
+        
+        # Install GUI files
+        echo "Installiere GUI-Dateien..."
+        install -D ./gui.py "$gui_dir/"
+        install -D ./config.json "$gui_dir/"
+        install -D ./babel.cfg "$gui_dir/"
+        install -D ./babel_config.py "$gui_dir/"
+        install -D ./gunicorn_config.py "$gui_dir/"
+        cp -r ./templates "$gui_dir/"
+        cp -r ./static "$gui_dir/"
+        cp -r ./translations "$gui_dir/"
+        echo "✓ GUI-Dateien installiert"
+        
+        # Python virtual environment setup
+        echo ""
+        echo "=== Python-Umgebung einrichten ==="
+        venv_dir="$gui_dir/venv"
+        
+        if [ -d "$venv_dir" ]; then
+            echo "Virtuelle Umgebung existiert bereits, wird übersprungen..."
+        else
+            echo "Erstelle virtuelle Umgebung in $venv_dir..."
+            python3 -m venv "$venv_dir"
+            echo "✓ Virtuelle Umgebung erstellt"
+        fi
+        
+        # Activate venv and install requirements
+        echo "Installiere Python-Abhängigkeiten..."
+        . "$venv_dir/bin/activate"
+        pip install --upgrade pip > /dev/null 2>&1
+        
+        if [ -f ./requirements.txt ]; then
+            pip install -r ./requirements.txt
+            echo "✓ Python-Abhängigkeiten installiert"
+        else
+            echo "⚠ requirements.txt nicht gefunden"
+        fi
+        deactivate
+        
+        # Systemd services installation
+        echo ""
+        echo "=== Systemd-Dienste installieren ==="
+        systemd_user_dir="$HOME/.config/systemd/user"
+        mkdir -p "$systemd_user_dir"
+        
+        # Copy service files and update paths
+        if [ -f ./systemd-services/pipewire-eq.service ]; then
+            echo "Installiere pipewire-eq.service..."
+            sed "s|WorkingDirectory=.*|WorkingDirectory=$gui_dir|g" ./systemd-services/pipewire-eq.service > "$systemd_user_dir/pipewire-eq.service"
+            echo "✓ pipewire-eq.service installiert"
+        else
+            echo "⚠ pipewire-eq.service nicht gefunden"
+        fi
+        
+        if [ -f ./systemd-services/pipewire-listen.service ]; then
+            echo "Installiere pipewire-listen.service..."
+            cp ./systemd-services/pipewire-listen.service "$systemd_user_dir/"
+            echo "✓ pipewire-listen.service installiert"
+        else
+            echo "⚠ pipewire-listen.service nicht gefunden"
+        fi
+        
+        # Reload systemd
+        echo "Systemd neu laden..."
+        systemctl --user daemon-reload
+        
+        # Enable services
+        echo "Aktiviere Systemd-Dienste..."
+        systemctl --user enable pipewire-eq.service
+        systemctl --user enable pipewire-listen.service
+        echo "✓ Dienste aktiviert"
         
         # Add user to pipewire group
         if getent group pipewire > /dev/null; then
-            echo "Adding user to 'pipewire' group..."
+            echo ""
+            echo "Füge Benutzer zur 'pipewire'-Gruppe hinzu..."
             "$ELEV" usermod -a -G pipewire $USER
-            echo "⚠ Please log out and log back in for group changes to take effect"
+            echo "⚠ Bitte melden Sie sich ab und wieder an, damit die Gruppenänderungen wirksam werden"
         else
-            echo "⚠ Group 'pipewire' does not exist"
+            echo "⚠ Gruppe 'pipewire' existiert nicht"
         fi
-        echo "✓ Installation completed"
+        echo ""
+        echo "✓ Installation abgeschlossen"
         ;;
     
     uninstall)
-        echo "=== PipeWire Uninstallation ==="
+        echo "=== PipeWire Deinstallation ==="
+        
+        # Disable and stop systemd services
+        echo "Deaktiviere Systemd-Dienste..."
+        systemctl --user stop pipewire-eq.service 2>/dev/null || true
+        systemctl --user stop pipewire-listen.service 2>/dev/null || true
+        systemctl --user disable pipewire-eq.service 2>/dev/null || true
+        systemctl --user disable pipewire-listen.service 2>/dev/null || true
+        rm -f ~/.config/systemd/user/pipewire-eq.service
+        rm -f ~/.config/systemd/user/pipewire-listen.service
+        systemctl --user daemon-reload
+        echo "✓ Systemd-Dienste entfernt"
+        
+        # Remove GUI installation
+        gui_dir="$HOME/.local/share/pipewire"
+        if [ -d "$gui_dir" ]; then
+            echo "Entferne GUI-Installation..."
+            rm -rf "$gui_dir"
+            echo "✓ GUI und virtuelle Umgebung entfernt"
+        fi
         
         # Remove user installation
         if [ -d ~/.config/pipewire ]; then
-            echo "Removing user configuration..."
+            echo "Entferne Benutzerkonfiguration..."
             rm -rf ~/.config/pipewire/hesuvi
             rm -f ~/.config/pipewire/pipewire.conf.d/sink-eq10-5.1.conf
             rm -f ~/.config/pipewire/pipewire.conf.d/sink-eq10-wide.conf
-            echo "✓ Filter configurations removed"
-            echo "Removing backups..."
-            rm -rf ~/.local/share/pipewire
-            echo "✓ Backups removed"
+            echo "✓ Filterkonfigurationen entfernt"
             
             # Check if pipewire.conf exists and ask before removing
             if [ -f ~/.config/pipewire/pipewire.conf.d/pipewire.conf ]; then
-                echo "⚠ The pipewire.conf in ~/.config/pipewire/pipewire.conf.d/"
-                read -r -p "Should it be removed? [y/N] " response
+                echo "⚠ pipewire.conf existiert in ~/.config/pipewire/pipewire.conf.d/"
+                read -r -p "Soll diese gelöscht werden? [y/N] " response
                 if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
                     rm -f ~/.config/pipewire/pipewire.conf.d/pipewire.conf
-                    echo "✓ pipewire.conf removed"
+                    echo "✓ pipewire.conf gelöscht"
                 else
-                    echo "Keeping pipewire.conf"
+                    echo "Behalte pipewire.conf"
                 fi
             fi
-            echo "⚠ Removing user from 'pipewire' group..."
+            
+            echo "⚠ Entferne Benutzer aus 'pipewire'-Gruppe..."
             "$ELEV" usermod -r -G pipewire $USER 2>/dev/null || true
-            echo "✓ User removed from 'pipewire' group"
+            echo "✓ Benutzer aus 'pipewire'-Gruppe entfernt"
         fi
-        echo "✓ Uninstallation completed"
+        echo ""
+        echo "✓ Deinstallation abgeschlossen"
         ;;
     *)
         echo "Usage: $0 [user|uninstall]"

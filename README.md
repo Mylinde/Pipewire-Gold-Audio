@@ -2,6 +2,16 @@
 
 This project provides automated installation and configuration of PipeWire with multiple audio profiles including spatial audio (HeSuVi 5.1).
 
+## 💡 Purpose
+
+This project is designed as a **resource-efficient audio enhancement solution for laptops**. Instead of expensive external audio hardware, it uses CPU-optimized PipeWire filter chains to significantly improve audio quality while keeping system resource usage minimal. Perfect for:
+
+- **Limited hardware**: Works on budget/ultrabook laptops with modest built-in speakers
+- **Low CPU overhead**: Highly optimized filters with minimal performance impact (~1-2% CPU)
+- **Maximum compatibility**: Works with any PipeWire-capable Linux distribution
+- **Desktop environment independent**: Works seamlessly on GNOME, KDE, XFCE, i3, Wayland, X11, and other Linux desktop environments
+- **Spatial audio**: HeSuVi 5.1 convolution support for immersive listening experiences
+
 ## ⚠️ Device-Specific Presets
 
 These audio profiles are **made for the ASUS Vivobook Go E1504FA** with its built-in speakers.
@@ -100,6 +110,8 @@ The script will:
 - Detect the soundcard and its sink ID automatically
 - Adjust file paths (HeSuVi, EQ filters)
 - Add you to the `pipewire` group (for RT priority)
+- Copy systemd service files to `~/.config/systemd/user/`
+- Enable and start systemd services for automatic backend startup
 - Create automatic backups if configurations already exist
 
 #### Installation Flow
@@ -116,6 +128,11 @@ Install HeSuVi files (always)
 Detect audio sink (wpctl)
 Set target.object in configs
 Add user to pipewire group
+Install systemd services (always)
+├─ Copy to ~/.config/systemd/user/
+├─ Enable pipewire-eq.service
+├─ Enable pipewire-listen.service
+└─ Start pipewire-listen.service
 ```
 
 ### Uninstallation
@@ -130,6 +147,7 @@ The script will:
 - **Ask if pipewire.conf should be removed**
   - YES → Delete pipewire.conf
   - NO → Keep pipewire.conf (preserves manual edits)
+- Disable and remove systemd service files
 - Remove user from `pipewire` group
 
 ## Directory Structure
@@ -150,18 +168,35 @@ The script will:
 │   └── sink-eq10-wide.conf         # Standard EQ stereo configuration
 ├── hesuvi/
 │   └── hesuvi.wav                  # HeSuVi HRTF Impulse Response
+├── systemd-services/
+│   ├── pipewire-eq.service         # Systemd service for Gunicorn backend
+│   └── pipewire-listen.service     # Systemd service for auto-starting EQ on PipeWire activity
 ├── static/
 │   ├── css/
 │   │   ├── main.css                # Main stylesheet (Light/Dark theme)
-│   │   └── round.min.css           # Material Design icons
+│   │   ├── main.min.css            # Minified stylesheet
+│   │   ├── round.css               # Material Design icons
+│   │   └── round.min.css           # Minified Material Design icons
+│   ├── fonts/                       # Font files for Material Design icons
+│   ├── img/                         # Images and icons
+│   │   ├── favicon.ico             # Light theme favicon
+│   │   ├── favicon-light.ico       # Dark theme favicon
+│   │   ├── music_note.svg          # SVG music note icon
+│   │   ├── music_note.ico          # Music note favicon
+│   │   └── screenshot.png          # Application screenshot
 │   ├── js/
 │   │   ├── main.js                 # EQ editor logic with auto-config detection
+│   │   ├── main.min.js             # Minified main script
 │   │   ├── change-language.js      # Language auto-detection
+│   │   ├── change-language.min.js  # Minified language switcher
 │   │   ├── serviceworker.js        # PWA service worker
-│   │   └── theme-toggler.min.js    # Light/Dark theme switcher
+│   │   ├── serviceworker.min.js    # Minified service worker
+│   │   ├── theme-toggler.js        # Light/Dark theme switcher
+│   │   └── theme-toggler.min.js    # Minified theme toggler
 │   └── manifest.json               # PWA manifest
 └── templates/
-    └── eq.html                     # Web GUI interface
+    ├── eq.html                     # Web GUI interface
+    └── eq.min.html                 # Minified Web GUI interface
 ```
 
 ## Configurations
@@ -232,7 +267,7 @@ The project includes an interactive web-based EQ editor for real-time audio adju
 - **Visual feedback**: Live value displays and status messages
 - **Automatic backups**: All changes are backed up to `~/.local/share/pipewire/backups/`
 - **Dark/Light Theme**: Automatically follows system preferences (respects `prefers-color-scheme`)
-- **Multi-Language UI**: English & Deutsch with automatic browser detection
+- **Multi-Language UI**: English, Deutsch & Türkçe with automatic browser detection
 - **PWA Support**: Can be installed as standalone app
 - **Modern UI**: Responsive design with Material Design icons
 
@@ -243,6 +278,7 @@ The GUI supports multiple languages with automatic detection:
 **Supported Languages:**
 - 🇬🇧 English
 - 🇩🇪 Deutsch (German)
+- 🇹🇷 Türkçe (Turkish)
 
 **How language selection works:**
 
@@ -259,7 +295,8 @@ The GUI supports multiple languages with automatic detection:
 ```bash
 # German user opens GUI → automatically in German
 # User can access English via: http://127.0.0.1:1338/?lang=en
-# Page reloads and stays in English (localStorage)
+# User can access Turkish via: http://127.0.0.1:1338/?lang=tr
+# Page reloads and stays in selected language (localStorage)
 ```
 
 ### Theme Support
@@ -392,6 +429,72 @@ pip install gunicorn
 ```
 
 Then navigate to: **http://127.0.0.1:1338**
+
+#### Automatic Startup via Systemd Services
+
+The systemd service files are **automatically installed and enabled** during the `./install user` process. No manual setup needed!
+
+**What gets installed automatically:**
+
+1. **pipewire-eq.service** - Starts the Gunicorn backend
+   - Multi-worker Gunicorn server (2 workers)
+   - Resource limits (64M memory, 50% CPU)
+   - Auto-restart on failure (5 second delay)
+   - Port: 1338
+
+2. **pipewire-listen.service** - Auto-starts EQ editor when PipeWire is active
+   - Monitors PipeWire state changes
+   - Automatically starts `pipewire-eq.service` when compatible audio sink detected
+   - Stops service when switching to different audio device
+   - Protects backups during EQ operation
+
+**After install completes:**
+- Services are copied to `~/.config/systemd/user/`
+- Services are enabled for automatic startup on boot
+- `pipewire-listen.service` is started immediately
+- Backend starts automatically when you log in
+
+**Manual service management:**
+
+If you need to restart or manage the services manually:
+
+```bash
+# Check service status
+systemctl --user status pipewire-eq.service
+systemctl --user status pipewire-listen.service
+
+# View logs in real-time
+journalctl --user -u pipewire-eq.service -f
+journalctl --user -u pipewire-listen.service -f
+
+# Stop/restart services
+systemctl --user stop pipewire-eq.service
+systemctl --user restart pipewire-eq.service
+
+# View all services
+systemctl --user list-units --type=service
+```
+
+**Customization:**
+
+Edit `~/.config/systemd/user/pipewire-eq.service` to adjust:
+- Port (default: 1338)
+- Worker count (default: 2)
+- Memory limit (default: 64M)
+- CPU quota (default: 50%)
+
+After changes:
+```bash
+systemctl --user daemon-reload
+systemctl --user restart pipewire-eq.service
+```
+
+**Disable automatic startup (if needed):**
+
+```bash
+systemctl --user disable pipewire-listen.service
+systemctl --user disable pipewire-eq.service
+```
 
 ### GUI Configuration
 
@@ -606,7 +709,7 @@ localStorage.removeItem('language')
 # Verify translations exist
 ls -la translations/
 
-# Should show: en/, de/ directories with LC_MESSAGES/messages.po
+# Should show: en/, de/, tr/ directories with LC_MESSAGES/messages.po
 ```
 
 ### 5.1 Config Band Values Not Reading
@@ -774,6 +877,6 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 ---
 
-**Last Updated:** 2026-03-10  
+**Last Updated:** 2026-03-15  
 **Version:** 1.0.0  
 **Status:** Stable ✅

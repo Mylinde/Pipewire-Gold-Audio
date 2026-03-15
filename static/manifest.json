@@ -4,8 +4,6 @@
   "description": "Real-time audio EQ editor for PipeWire",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#181818",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -23,7 +21,7 @@
       "form_factor": "narrow"
     }
   ],
-  "categories": ["music", "utilities"],
+  "categories": ["audio", "utilities"],
   "scope": "/",
   "shortcuts": [
     {
