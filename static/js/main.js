@@ -345,7 +345,7 @@ function onSliderEnd(bandId) {
             return;
         }
         
-        data['_backup'] = false;
+        data['_backup'] = true;
         data['_restart'] = true;
         
         fetch('/api/update', {
@@ -369,7 +369,7 @@ function onSliderEnd(bandId) {
     .catch(error => {
         console.error('Backup status check failed, continuing with update:', error);
         // Continue anyway if backup status check fails
-        data['_backup'] = false;
+        data['_backup'] = true;
         data['_restart'] = true;
         
         fetch('/api/update', {
@@ -442,7 +442,7 @@ async function saveChanges() {
         return;
     }
     
-    data['_backup'] = false;
+    data['_backup'] = true;
     data['_restart'] = true;
     
     try {
