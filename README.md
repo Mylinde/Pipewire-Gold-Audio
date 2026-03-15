@@ -69,15 +69,11 @@ This project provides automated installation and configuration of PipeWire with 
 ### Optional (for Production Deployment)
 - Gunicorn (for production-grade server)
 
-### Python Dependencies Installation
+### Python Dependencies
 
-Install required Python packages:
+Python dependencies are **automatically installed** during `./install user` into a virtual environment at `~/.local/share/pipewire/venv/`.
 
-```bash
-pip install -r requirements.txt
-```
-
-Current dependencies:
+**Current dependencies:**
 
 ```
 Flask==3.0.0
@@ -89,9 +85,13 @@ Jinja2==3.1.2
 pytz==2024.1
 ```
 
-Or install individually:
+**Manual installation (optional, only if you want to install outside the automated setup):**
 
 ```bash
+# From requirements.txt
+pip install -r requirements.txt
+
+# Or individually
 pip install Flask gunicorn Flask-Babel
 ```
 
@@ -109,9 +109,13 @@ The script will:
 - Detect your current username
 - Detect the soundcard and its sink ID automatically
 - Adjust file paths (HeSuVi, EQ filters)
-- Add you to the `pipewire` group (for RT priority)
+- **Automatically create and configure Python virtual environment** in `~/.local/share/pipewire/venv/`
+- **Install Python dependencies** from requirements.txt into the venv
+- Install and configure GUI files to `~/.local/share/pipewire/`
+- Install translation files (English, German, Turkish)
 - Copy systemd service files to `~/.config/systemd/user/`
 - Enable and start systemd services for automatic backend startup
+- Add you to the `pipewire` group (for RT priority)
 - Create automatic backups if configurations already exist
 
 #### Installation Flow
@@ -127,12 +131,19 @@ Install filter configurations (always)
 Install HeSuVi files (always)
 Detect audio sink (wpctl)
 Set target.object in configs
-Add user to pipewire group
+Create Python venv (if not exists)
+├─ Create venv in ~/.local/share/pipewire/venv/
+└─ Install requirements from requirements.txt
+Install GUI files
+├─ Copy gui.py, config.json, gunicorn_config.py
+├─ Copy templates/ and static/ files
+└─ Copy translations/
 Install systemd services (always)
 ├─ Copy to ~/.config/systemd/user/
 ├─ Enable pipewire-eq.service
 ├─ Enable pipewire-listen.service
 └─ Start pipewire-listen.service
+Add user to pipewire group
 ```
 
 ### Uninstallation
@@ -390,14 +401,23 @@ eq_band_1_R  ← Right channel (automatically updated)
 
 ### Running the GUI
 
+**Note:** Python dependencies are automatically installed during installation into `~/.local/share/pipewire/venv/`. You can either activate the venv or use the venv Python directly.
+
 #### Development Mode (Flask built-in server)
 
+**Option 1: Using venv directly**
 ```bash
-python3 gui.py
+~/.local/share/pipewire/venv/bin/python3 ~/.local/share/pipewire/gui.py
+```
+
+**Option 2: Activate venv first**
+```bash
+source ~/.local/share/pipewire/venv/bin/activate
+python3 ~/.local/share/pipewire/gui.py
 ```
 
 **Pros:**
-- Simple one-command startup
+- Simple startup
 - Auto-reload on code changes
 - Great for development and testing
 
@@ -410,7 +430,15 @@ Then open your browser and navigate to: **http://127.0.0.1:1338**
 
 #### Production Mode (Gunicorn WSGI server)
 
+**Option 1: Using venv directly**
 ```bash
+~/.local/share/pipewire/venv/bin/python3 -B -m gunicorn --config ~/.local/share/pipewire/gunicorn_config.py --chdir ~/.local/share/pipewire gui:app
+```
+
+**Option 2: Activate venv first**
+```bash
+source ~/.local/share/pipewire/venv/bin/activate
+cd ~/.local/share/pipewire
 python3 -B -m gunicorn --config gunicorn_config.py gui:app
 ```
 
@@ -421,12 +449,9 @@ python3 -B -m gunicorn --config gunicorn_config.py gui:app
 - Pre-fork worker model for robustness
 
 **Cons:**
-- Requires gunicorn installation: `pip install gunicorn`
+- More resource intensive than Flask dev server
 
-Installation:
-```bash
-pip install gunicorn
-```
+All dependencies pre-installed during `./install user`. No additional setup needed!
 
 Then navigate to: **http://127.0.0.1:1338**
 
@@ -437,6 +462,7 @@ The systemd service files are **automatically installed and enabled** during the
 **What gets installed automatically:**
 
 1. **pipewire-eq.service** - Starts the Gunicorn backend
+   - Virtual environment: `~/.local/share/pipewire/venv/`
    - Multi-worker Gunicorn server (2 workers)
    - Resource limits (64M memory, 50% CPU)
    - Auto-restart on failure (5 second delay)
@@ -766,33 +792,45 @@ If audio sounds distorted or clips:
 
 ### GUI Won't Start
 
+**Python dependencies issue** (if installation failed):
+```bash
+# Reinstall dependencies into venv
+source ~/.local/share/pipewire/venv/bin/activate
+pip install -r requirements.txt
+
+# Or from the project directory
+~/.local/share/pipewire/venv/bin/pip install -r ~/path/to/requirements.txt
+```
+
 **Flask dev server issues:**
 ```bash
-# Make sure Flask is installed
-pip install flask
+# Activate venv first
+source ~/.local/share/pipewire/venv/bin/activate
 
 # Run with verbose output
-python3 -u gui.py
+python3 -u ~/.local/share/pipewire/gui.py
 ```
 
 **Gunicorn issues:**
 ```bash
-# Check for permission errors
+# Activate venv and run from GUI directory
+source ~/.local/share/pipewire/venv/bin/activate
+cd ~/.local/share/pipewire
 python3 -B -m gunicorn --config gunicorn_config.py gui:app
 
-# If pkg_resources error occurs, use Flask dev server instead
-python3 gui.py
+# If pkg_resources error occurs, try Flask dev server instead
+python3 -u gui.py
 ```
 
-**Flask-Babel issues:**
+**Check venv status:**
 ```bash
-# Make sure Flask-Babel is installed
-pip install Flask-Babel
+# Verify venv exists and is working
+~/.local/share/pipewire/venv/bin/python3 --version
 
-# Verify version
-pip show flask-babel
+# List installed packages
+~/.local/share/pipewire/venv/bin/pip list
 
-# Should show: Version: 4.0.0
+# Should include: Flask, gunicorn, Flask-Babel
 ```
 
 ## Customizing EQ Settings
