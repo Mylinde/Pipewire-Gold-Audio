@@ -1,0 +1,255 @@
+# Turkish translations
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-03-15 03:00+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: tr\n"
+"Language-Team: tr <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.10.3\n"
+
+#: gui.py:478
+msgid "Bass Boost"
+msgstr "Bas Artırma"
+
+#: gui.py:479
+msgid "Foundation"
+msgstr "Temel"
+
+#: gui.py:480
+msgid "Warmth"
+msgstr "Sıcaklık"
+
+#: gui.py:481
+msgid "Anti-Boxy"
+msgstr "Anti-Boxy"
+
+#: gui.py:482
+msgid "Anti-Nasal"
+msgstr "Anti-Nasal"
+
+#: gui.py:483
+msgid "Midrange"
+msgstr "Orta Frekans"
+
+#: gui.py:484
+msgid "Anti-Plastic"
+msgstr "Anti-Plastik"
+
+#: gui.py:485
+msgid "Presence"
+msgstr "Hazır Bulunma"
+
+#: gui.py:486
+msgid "Brilliance"
+msgstr "Parlaklık"
+
+#: gui.py:487
+msgid "Air"
+msgstr "Hava"
+
+#: gui.py:490
+msgid "High-Pass Filter"
+msgstr "Yüksek Geçiş Filtresi"
+
+#: gui.py:491
+msgid "De-Esser"
+msgstr "De-Esser"
+
+#: gui.py:492
+msgid "Final Gain"
+msgstr "Nihai Kazanç"
+
+#: gui.py:493
+msgid "Soft Limiter"
+msgstr "Yumuşak Sınırlayıcı"
+
+#: gui.py:494
+msgid "Frequency (Hz)"
+msgstr "Frekans (Hz)"
+
+#: gui.py:495
+msgid "Gain (dB)"
+msgstr "Kazanç (dB)"
+
+#: gui.py:496
+msgid "Gain (Factor)"
+msgstr "Kazanç (Faktör)"
+
+#: gui.py:497
+msgid "Q (Sharpness)"
+msgstr "Q (Keskinlik)"
+
+#: gui.py:498
+msgid "Q (Width)"
+msgstr "Q (Genişlik)"
+
+#: gui.py:499
+msgid "Q (Response)"
+msgstr "Q (Tepki)"
+
+#: gui.py:500
+msgid "Removes low-frequency rumble and noise below the cutoff frequency."
+msgstr "Kesme frekansının altında düşük frekanslı uğultuyu ve gürültüyü kaldırır."
+
+#: gui.py:501
+msgid "Reduces sibilance and harsh high-frequency sounds in vocals and speech."
+msgstr "Vokallerdeki ve konuşmadaki sızıltıları ve sert yüksek frekansları azaltır."
+
+#: gui.py:502
+msgid "Tip: Keep below 1.2 to avoid clipping."
+msgstr "İpucu: Klipping'i önlemek için 1,2'nin altında tutun."
+
+#: gui.py:503
+msgid "Protects from digital clipping at high frequencies."
+msgstr "Yüksek frekanslarda dijital klipping'den korur."
+
+#: gui.py:506
+msgid "Configuration loaded successfully"
+msgstr "Yapılandırma başarıyla yüklendi"
+
+#: gui.py:507
+msgid "Error loading configuration"
+msgstr "Yapılandırma yüklenirken hata"
+
+#: gui.py:508
+msgid "Adjusting value (will save on release)"
+msgstr "Değer ayarlanıyor (serbest bırakıldığında kaydedilecek)"
+
+#: gui.py:509
+msgid "Saving changes..."
+msgstr "Değişiklikler kaydediliyor..."
+
+#: gui.py:510
+msgid "Changes applied"
+msgstr "Değişiklikler uygulandı"
+
+#: gui.py:511
+msgid "Saving changes and restarting PipeWire..."
+msgstr "Değişiklikler kaydediliyor ve PipeWire yeniden başlatılıyor..."
+
+#: gui.py:512
+msgid "Reset all EQ values to default?"
+msgstr "Tüm EQ değerlerini varsayılana sıfırla?"
+
+#: gui.py:513
+msgid "Restore last backup?"
+msgstr "Son yedeklemeyi geri yükle?"
+
+#: gui.py:514
+msgid "Preset loaded"
+msgstr "Ön ayar yüklendi"
+
+#: gui.py:515
+msgid "Restart PipeWire? (audio will be interrupted for ~2 seconds)"
+msgstr "PipeWire yeniden başlat? (ses yaklaşık 2 saniye kesintiye uğrar)"
+
+#: gui.py:516
+msgid "PipeWire restarted"
+msgstr "PipeWire yeniden başlatıldı"
+
+#: gui.py:517
+msgid "Restarting PipeWire..."
+msgstr "PipeWire yeniden başlatılıyor..."
+
+#: gui.py:520 templates/eq.html:67 templates/eq.html:68
+msgid "Undo"
+msgstr "Geri Al"
+
+#: gui.py:521 templates/eq.html:79
+msgid "Restore Backup"
+msgstr "Yedeği Geri Yükle"
+
+#: gui.py:522
+msgid "Restore"
+msgstr "Geri Yükle"
+
+#: gui.py:523
+msgid "No backups available"
+msgstr "Kullanılabilir yedek yok"
+
+#: gui.py:524
+msgid "Error loading backups"
+msgstr "Yedekler yüklenirken hata"
+
+#: gui.py:525
+msgid "Restore this backup? Current configuration will be backed up."
+msgstr "Bu yedeği geri yükle? Mevcut yapılandırma yedeklenecek."
+
+#: gui.py:526
+msgid "Backup restored successfully"
+msgstr "Yedek başarıyla geri yüklendi"
+
+#: gui.py:527
+msgid "Error restoring backup"
+msgstr "Yedek geri yüklenirken hata"
+
+#: gui.py:528
+msgid "Configuration reloaded"
+msgstr "Yapılandırma yeniden yüklendi"
+
+#: gui.py:529
+msgid "Restoring backup..."
+msgstr "Yedek geri yükleniyor..."
+
+#: templates/eq.html:19 templates/eq.html:25
+msgid "PipeWire Gold Audio EQ Editor"
+msgstr "PipeWire Gold Audio EQ Editörü"
+
+#: templates/eq.html:27
+msgid "Adjust your audio settings in real-time"
+msgstr "Ses ayarlarınızı gerçek zamanda ayarlayın"
+
+#: templates/eq.html:31
+msgid "Note:"
+msgstr "Not:"
+
+#: templates/eq.html:31
+msgid "Changes are saved immediately and PipeWire is restarted."
+msgstr "Değişiklikler hemen kaydedilir ve PipeWire yeniden başlatılır."
+
+#: templates/eq.html:35
+msgid "Presets"
+msgstr "Ön Ayarlar"
+
+#: templates/eq.html:37 templates/eq.html:38
+msgid "Music"
+msgstr "Müzik"
+
+#: templates/eq.html:40 templates/eq.html:41
+msgid "Podcast"
+msgstr "Podcast"
+
+#: templates/eq.html:43 templates/eq.html:44
+msgid "Bright"
+msgstr "Parlak"
+
+#: templates/eq.html:46 templates/eq.html:47
+msgid "Warm"
+msgstr "Sıcak"
+
+#: templates/eq.html:54
+msgid "Loading current configuration..."
+msgstr "Mevcut yapılandırma yükleniyor..."
+
+#: templates/eq.html:61
+msgid "Special Filters"
+msgstr "Özel Filtreler"
+
+#: templates/eq.html:70 templates/eq.html:71
+msgid "Reset all"
+msgstr "Tümünü Sıfırla"
+
+#: templates/eq.html:73 templates/eq.html:74
+msgid "Restart PipeWire"
+msgstr "PipeWire Yeniden Başlat"
+
+#: templates/eq.html:81
+msgid "Loading backups..."
+msgstr "Yedekler yükleniyor..."

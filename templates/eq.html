@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="{{ current_language }}">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="color-scheme" content="dark light" />
+        <meta name="theme-color" content="#20232b" media="(prefers-color-scheme:dark)" />
+        <meta name="theme-color" content="#cccccc" media="(prefers-color-scheme:light)" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-title" content="PipeWire EQ" />
+        <meta name="full-screen" content="yes" />
+        <meta name="description" content="GUI to configure EQ-settings in a pipewire filter-chain" />
+        <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" media="(prefers-color-scheme:light)" />
+        <link rel="icon" href="{{ url_for('static', filename='img/favicon-light.ico') }}" media="(prefers-color-scheme:dark)" />    
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/main.min.css') }}" />
+        <link rel="preload" href="{{ url_for('static', filename='css/round.min.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="{{ url_for('static', filename='css/round.min.css') }}"></noscript>
+        <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />        
+        <title>{{ _('PipeWire Gold Audio EQ Editor') }}</title>
+    </head>
+    <body>
+        <div class="container">
+            <h1>
+                <span class="material-icons-round" style="font-size:1.6em" aria-hidden="true">music_note</span>
+                {{ _('PipeWire Gold Audio EQ Editor') }}
+            </h1>
+            <p class="subtitle">{{ _('Adjust your audio settings in real-time') }}</p>
+
+            <div class="info-box">
+                <span class="material-icons-round" style="font-size:1.6em" aria-hidden="true">lightbulb</span>
+                <strong>{{ _('Note:') }}</strong>{{ _('Changes are saved immediately and PipeWire is restarted.') }}
+            </div>
+
+            <div class="preset-section">
+                <h3><span class="material-icons-round" aria-hidden="true">playlist_play</span>{{ _('Presets') }}</h3>
+                <div class="preset-buttons">
+                    <button class="btn-preset" onclick="loadPreset('music')" aria-label="{{ _('Music') }}">
+                        <span class="material-icons-round" aria-hidden="true">music_note</span>{{ _('Music') }}
+                    </button>
+                    <button class="btn-preset" onclick="loadPreset('podcast')" aria-label="{{ _('Podcast') }}">
+                        <span class="material-icons-round" aria-hidden="true">mic</span>{{ _('Podcast') }}
+                    </button>
+                    <button class="btn-preset" onclick="loadPreset('bright')" aria-label="{{ _('Bright') }}">
+                        <span class="material-icons-round" aria-hidden="true">wb_sunny</span>{{ _('Bright') }}
+                    </button>
+                    <button class="btn-preset" onclick="loadPreset('warm')" aria-label="{{ _('Warm') }}">
+                        <span class="material-icons-round" aria-hidden="true">whatshot</span>{{ _('Warm') }}
+                    </button>
+                </div>
+            </div>
+
+            <div id="loadingSpinner" class="loading">
+                <div class="spinner"></div>
+                {{ _('Loading current configuration...') }}
+            </div>
+
+            <div id="eqGrid" class="eq-grid">
+            </div>
+
+            <div id="specialFiltersSection" class="eq-section-special" style="display: none;">
+                <h3><span class="material-icons-round" aria-hidden="true">playlist_play</span>{{ _('Special Filters') }}</h3>
+                <div id="specialFiltersGrid">
+                </div>
+            </div>
+
+            <div class="controls" id="controlsSection" style="display: none;">
+                <button class="btn-secondary" onclick="toggleBackupsPanel()" aria-label="{{ _('Undo') }}" aria-expanded="false">
+                    <span class="material-icons-round" aria-hidden="true">undo</span>{{ _('Undo') }}
+                </button>
+                <button class="btn-secondary" onclick="resetAll()" aria-label="{{ _('Reset all') }}">
+                    <span class="material-icons-round" aria-hidden="true">restore</span>{{ _('Reset all') }}
+                </button>
+                <button class="btn-danger" onclick="restorePipeWire()" aria-label="{{ _('Restart PipeWire') }}">
+                    <span class="material-icons-round" aria-hidden="true">autorenew</span>{{ _('Restart PipeWire') }}
+                </button>
+            </div>
+
+            <div id="backupsPanel" class="backups-panel closing" onmouseleave="closeBackupsPanel()">
+                <h3><span class="material-icons-round" aria-hidden="true">backup</span>{{ _('Restore Backup') }}</h3>
+                <div id="backupsList" class="backups-list">
+                    <p class="backup-loading">{{ _('Loading backups...') }}</p>
+                </div>
+            </div>
+
+            <div class="status-message" id="statusMessage"></div>        
+        </div>
+
+        <script>
+            window.gettext = window.gettext || function(msgid) {
+                return (window.translations || {})[msgid] || msgid;
+            };
+            window._ = window.gettext;
+
+            async function initTranslations() {
+                try {
+                    const response = await fetch('/api/translations');
+                    if (!response.ok) throw new Error('Translation load failed');
+                    window.translations = await response.json();
+                    window.gettext = function(msgid) {
+                        return window.translations[msgid] || msgid;
+                    };
+                    window._ = window.gettext;
+                    console.log('✓ Translations loaded:', Object.keys(window.translations).length, 'strings');
+                } catch (error) {
+                    console.error('✗ Error loading translations:', error);
+                } finally {
+                
+                    const script = document.createElement('script');
+                    script.src = "{{ url_for('static', filename='js/main.js') }}";
+                    script.onload = function() {
+                        console.log('✓ main.js loaded, initializing EQ...');
+                    
+                        if (window.initializeEQ) {
+                            window.initializeEQ();
+                        }
+                    };
+                    script.onerror = function() {
+                        console.error('✗ Error loading main.js');
+                    };
+                    document.body.appendChild(script);
+                }
+            }
+
+            initTranslations();
+        </script>
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register("{{ url_for('static', filename='js/serviceworker.js') }}")
+                        .then(reg => console.log('✓ Service Worker registered'))
+                        .catch(err => console.error('✗ Service Worker registration failed:', err));
+                });
+            }
+        </script>    
+        <!-- Non-critical scripts (async, non-blocking) -->
+        <script async src="{{ url_for('static', filename='js/theme-toggler.min.js') }}"></script>
+        <script async src="{{ url_for('static', filename='js/change-language.js') }}"></script>
+    </body>
+</html>

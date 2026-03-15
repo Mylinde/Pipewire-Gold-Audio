@@ -1,0 +1,256 @@
+# German translations
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-03-15 03:00+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.10.3\n"
+
+#: gui.py:478
+msgid "Bass Boost"
+msgstr "Bass-Boost"
+
+#: gui.py:479
+msgid "Foundation"
+msgstr "Fundament"
+
+#: gui.py:480
+msgid "Warmth"
+msgstr "Wärme"
+
+#: gui.py:481
+msgid "Anti-Boxy"
+msgstr "Anti-Boxy"
+
+#: gui.py:482
+msgid "Anti-Nasal"
+msgstr "Anti-Nasal"
+
+#: gui.py:483
+msgid "Midrange"
+msgstr "Mittenbereich"
+
+#: gui.py:484
+msgid "Anti-Plastic"
+msgstr "Anti-Plastik"
+
+#: gui.py:485
+msgid "Presence"
+msgstr "Präsenz"
+
+#: gui.py:486
+msgid "Brilliance"
+msgstr "Brillanz"
+
+#: gui.py:487
+msgid "Air"
+msgstr "Luft"
+
+#: gui.py:490
+msgid "High-Pass Filter"
+msgstr "Hochpass-Filter"
+
+#: gui.py:491
+msgid "De-Esser"
+msgstr "De-Esser"
+
+#: gui.py:492
+msgid "Final Gain"
+msgstr "Endverstärkung"
+
+#: gui.py:493
+msgid "Soft Limiter"
+msgstr "Soft-Limiter"
+
+#: gui.py:494
+msgid "Frequency (Hz)"
+msgstr "Frequenz (Hz)"
+
+#: gui.py:495
+msgid "Gain (dB)"
+msgstr "Verstärkung (dB)"
+
+#: gui.py:496
+msgid "Gain (Factor)"
+msgstr "Verstärkung (Faktor)"
+
+#: gui.py:497
+msgid "Q (Sharpness)"
+msgstr "Q (Schärfe)"
+
+#: gui.py:498
+msgid "Q (Width)"
+msgstr "Q (Breite)"
+
+#: gui.py:499
+msgid "Q (Response)"
+msgstr "Q (Ansprache)"
+
+#: gui.py:500
+msgid "Removes low-frequency rumble and noise below the cutoff frequency."
+msgstr "Entfernt tieffrequentes Brummen und Rauschen unterhalb der Grenzfrequenz."
+
+#: gui.py:501
+msgid "Reduces sibilance and harsh high-frequency sounds in vocals and speech."
+msgstr "Reduziert Zischlaute und harte Hochfrequenzen bei Vocals und Sprache."
+
+#: gui.py:502
+msgid "Tip: Keep below 1.2 to avoid clipping."
+msgstr "Tipp: Unter 1,2 halten um Übersteuerung zu vermeiden."
+
+#: gui.py:503
+msgid "Protects from digital clipping at high frequencies."
+msgstr "Schützt vor digitaler Übersteuerung bei hohen Frequenzen."
+
+#: gui.py:506
+msgid "Configuration loaded successfully"
+msgstr "Konfiguration erfolgreich geladen"
+
+#: gui.py:507
+msgid "Error loading configuration"
+msgstr "Fehler beim Laden der Konfiguration"
+
+#: gui.py:508
+msgid "Adjusting value (will save on release)"
+msgstr "Wert wird angepasst (speichert beim Loslassen)"
+
+#: gui.py:509
+msgid "Saving changes..."
+msgstr "Speichere Änderungen..."
+
+#: gui.py:510
+msgid "Changes applied"
+msgstr "Änderungen angewendet"
+
+#: gui.py:511
+msgid "Saving changes and restarting PipeWire..."
+msgstr "Speichere Änderungen und starte PipeWire neu..."
+
+#: gui.py:512
+msgid "Reset all EQ values to default?"
+msgstr "Alle EQ-Werte auf Standard zurücksetzen?"
+
+#: gui.py:513
+msgid "Restore last backup?"
+msgstr "Letztes Backup wiederherstellen?"
+
+#: gui.py:514
+msgid "Preset loaded"
+msgstr "Preset geladen"
+
+#: gui.py:515
+msgid "Restart PipeWire? (audio will be interrupted for ~2 seconds)"
+msgstr "PipeWire neu starten? (Audio wird für ca. 2 Sekunden unterbrochen)"
+
+#: gui.py:516
+msgid "PipeWire restarted"
+msgstr "PipeWire neu gestartet"
+
+#: gui.py:517
+msgid "Restarting PipeWire..."
+msgstr "Starte PipeWire neu..."
+
+#: gui.py:520 templates/eq.html:67 templates/eq.html:68
+msgid "Undo"
+msgstr "Rückgängig"
+
+#: gui.py:521 templates/eq.html:79
+msgid "Restore Backup"
+msgstr "Backup wiederherstellen"
+
+#: gui.py:522
+msgid "Restore"
+msgstr "Wiederherstellen"
+
+#: gui.py:523
+msgid "No backups available"
+msgstr "Keine Backups verfügbar"
+
+#: gui.py:524
+msgid "Error loading backups"
+msgstr "Fehler beim Laden der Backups"
+
+#: gui.py:525
+msgid "Restore this backup? Current configuration will be backed up."
+msgstr "Dieses Backup wiederherstellen? Aktuelle Konfiguration wird gesichert."
+
+#: gui.py:526
+msgid "Backup restored successfully"
+msgstr "Backup erfolgreich wiederhergestellt"
+
+#: gui.py:527
+msgid "Error restoring backup"
+msgstr "Fehler beim Wiederherstellen des Backups"
+
+#: gui.py:528
+msgid "Configuration reloaded"
+msgstr "Konfiguration neu geladen"
+
+#: gui.py:529
+msgid "Restoring backup..."
+msgstr "Wiederherstellen des Backups..."
+
+#: templates/eq.html:19 templates/eq.html:25
+msgid "PipeWire Gold Audio EQ Editor"
+msgstr "PipeWire Gold Audio EQ Editor"
+
+#: templates/eq.html:27
+msgid "Adjust your audio settings in real-time"
+msgstr "Passe deine Audio-Einstellungen in Echtzeit an"
+
+#: templates/eq.html:31
+msgid "Note:"
+msgstr "Hinweis:"
+
+#: templates/eq.html:31
+msgid "Changes are saved immediately and PipeWire is restarted."
+msgstr "Änderungen werden sofort gespeichert und PipeWire wird neu gestartet."
+
+#: templates/eq.html:35
+msgid "Presets"
+msgstr "Voreinstellungen"
+
+#: templates/eq.html:37 templates/eq.html:38
+msgid "Music"
+msgstr "Musik"
+
+#: templates/eq.html:40 templates/eq.html:41
+msgid "Podcast"
+msgstr "Podcast"
+
+#: templates/eq.html:43 templates/eq.html:44
+msgid "Bright"
+msgstr "Hell"
+
+#: templates/eq.html:46 templates/eq.html:47
+msgid "Warm"
+msgstr "Warm"
+
+#: templates/eq.html:54
+msgid "Loading current configuration..."
+msgstr "Lade aktuelle Konfiguration..."
+
+#: templates/eq.html:61
+msgid "Special Filters"
+msgstr "Spezielle Filter"
+
+#: templates/eq.html:70 templates/eq.html:71
+msgid "Reset all"
+msgstr "Alles zurücksetzen"
+
+#: templates/eq.html:73 templates/eq.html:74
+msgid "Restart PipeWire"
+msgstr "PipeWire neu starten"
+
+#: templates/eq.html:81
+msgid "Loading backups..."
+msgstr "Lade Backups..."
+

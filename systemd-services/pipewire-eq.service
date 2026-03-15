@@ -1,0 +1,34 @@
+[Unit]
+Description=PipeWire Audio EQ Editor
+After=network.target pipewire.service
+Wants=pipewire.service
+
+[Service]
+Type=simple
+WorkingDirectory=$HOME/.local/share/pipewire
+
+# Start command
+ExecStart=/usr/bin/python3 -B -m gunicorn \
+    --workers 2 \
+    --worker-class gthread \
+    --threads 2 \
+    --bind 127.0.0.1:1338 \
+    --timeout 120 \
+    gui:app
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+
+# Resource limits
+MemoryMax=64M
+CPUQuota=50%
+Nice=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pipewire-eq
+
+[Install]
+WantedBy=default.target
