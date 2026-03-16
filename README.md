@@ -71,7 +71,7 @@ This project provides automated installation and configuration of PipeWire with 
 
 ### Python Dependencies
 
-Python dependencies are **automatically installed** during `./install user` into a virtual environment at `~/.local/share/pipewire/venv/`.
+Python dependencies are **automatically installed** during `./install user` into a virtual environment at `~/.local/share/goldaudio/venv/`.
 
 **Current dependencies:**
 
@@ -109,9 +109,9 @@ The script will:
 - Detect your current username
 - Detect the soundcard and its sink ID automatically
 - Adjust file paths (HeSuVi, EQ filters)
-- **Automatically create and configure Python virtual environment** in `~/.local/share/pipewire/venv/`
+- **Automatically create and configure Python virtual environment** in `~/.local/share/goldaudio/venv/`
 - **Install Python dependencies** from requirements.txt into the venv
-- Install and configure GUI files to `~/.local/share/pipewire/`
+- Install and configure GUI files to `~/.local/share/goldaudio/`
 - Install translation files (English, German, Turkish)
 - Copy systemd service files to `~/.config/systemd/user/`
 - Enable and start systemd services for automatic backend startup
@@ -132,7 +132,7 @@ Install HeSuVi files (always)
 Detect audio sink (wpctl)
 Set target.object in configs
 Create Python venv (if not exists)
-├─ Create venv in ~/.local/share/pipewire/venv/
+├─ Create venv in ~/.local/share/goldaudio/venv/
 └─ Install requirements from requirements.txt
 Install GUI files
 ├─ Copy gui.py, config.json, gunicorn_config.py
@@ -276,7 +276,7 @@ The project includes an interactive web-based EQ editor for real-time audio adju
 - **Multi-Channel Support**: Full support for 5.1 L/R channel synchronization
 - **Audio presets**: Music, Podcast, Bright, Warm, Reset
 - **Visual feedback**: Live value displays and status messages
-- **Automatic backups**: All changes are backed up to `~/.local/share/pipewire/backups/`
+- **Automatic backups**: All changes are backed up to `~/.local/share/goldaudio/backups/`
 - **Dark/Light Theme**: Automatically follows system preferences (respects `prefers-color-scheme`)
 - **Multi-Language UI**: English, Deutsch & Türkçe with automatic browser detection
 - **PWA Support**: Can be installed as standalone app
@@ -401,19 +401,19 @@ eq_band_1_R  ← Right channel (automatically updated)
 
 ### Running the GUI
 
-**Note:** Python dependencies are automatically installed during installation into `~/.local/share/pipewire/venv/`. You can either activate the venv or use the venv Python directly.
+**Note:** Python dependencies are automatically installed during installation into `~/.local/share/goldaudio/venv/`. You can either activate the venv or use the venv Python directly.
 
 #### Development Mode (Flask built-in server)
 
 **Option 1: Using venv directly**
 ```bash
-~/.local/share/pipewire/venv/bin/python3 ~/.local/share/pipewire/gui.py
+~/.local/share/goldaudio/venv/bin/python3 ~/.local/share/goldaudio/gui.py
 ```
 
 **Option 2: Activate venv first**
 ```bash
-source ~/.local/share/pipewire/venv/bin/activate
-python3 ~/.local/share/pipewire/gui.py
+source ~/.local/share/goldaudio/venv/bin/activate
+python3 ~/.local/share/goldaudio/gui.py
 ```
 
 **Pros:**
@@ -432,13 +432,13 @@ Then open your browser and navigate to: **http://127.0.0.1:1338**
 
 **Option 1: Using venv directly**
 ```bash
-~/.local/share/pipewire/venv/bin/python3 -B -m gunicorn --config ~/.local/share/pipewire/gunicorn_config.py --chdir ~/.local/share/pipewire gui:app
+~/.local/share/goldaudio/venv/bin/python3 -B -m gunicorn --config ~/.local/share/goldaudio/gunicorn_config.py --chdir ~/.local/share/goldaudio gui:app
 ```
 
 **Option 2: Activate venv first**
 ```bash
-source ~/.local/share/pipewire/venv/bin/activate
-cd ~/.local/share/pipewire
+source ~/.local/share/goldaudio/venv/bin/activate
+cd ~/.local/share/goldaudio
 python3 -B -m gunicorn --config gunicorn_config.py gui:app
 ```
 
@@ -462,7 +462,7 @@ The systemd service files are **automatically installed and enabled** during the
 **What gets installed automatically:**
 
 1. **pipewire-eq.service** - Starts the Gunicorn backend
-   - Virtual environment: `~/.local/share/pipewire/venv/`
+   - Virtual environment: `~/.local/share/goldaudio/venv/`
    - Multi-worker Gunicorn server (2 workers)
    - Resource limits (64M memory, 50% CPU)
    - Auto-restart on failure (5 second delay)
@@ -541,7 +541,7 @@ Edit `config.json` to customize GUI behavior:
 All EQ changes are automatically backed up to:
 
 ```
-~/.local/share/pipewire/backups/
+~/.local/share/goldaudio/backups/
 ```
 
 - **Backup strategy**: Circular (oldest backup is overwritten when limit reached)
@@ -795,27 +795,27 @@ If audio sounds distorted or clips:
 **Python dependencies issue** (if installation failed):
 ```bash
 # Reinstall dependencies into venv
-source ~/.local/share/pipewire/venv/bin/activate
+source ~/.local/share/goldaudio/venv/bin/activate
 pip install -r requirements.txt
 
 # Or from the project directory
-~/.local/share/pipewire/venv/bin/pip install -r ~/path/to/requirements.txt
+~/.local/share/goldaudio/venv/bin/pip install -r ~/path/to/requirements.txt
 ```
 
 **Flask dev server issues:**
 ```bash
 # Activate venv first
-source ~/.local/share/pipewire/venv/bin/activate
+source ~/.local/share/goldaudio/venv/bin/activate
 
 # Run with verbose output
-python3 -u ~/.local/share/pipewire/gui.py
+python3 -u ~/.local/share/goldaudio/gui.py
 ```
 
 **Gunicorn issues:**
 ```bash
 # Activate venv and run from GUI directory
-source ~/.local/share/pipewire/venv/bin/activate
-cd ~/.local/share/pipewire
+source ~/.local/share/goldaudio/venv/bin/activate
+cd ~/.local/share/goldaudio
 python3 -B -m gunicorn --config gunicorn_config.py gui:app
 
 # If pkg_resources error occurs, try Flask dev server instead
@@ -825,10 +825,10 @@ python3 -u gui.py
 **Check venv status:**
 ```bash
 # Verify venv exists and is working
-~/.local/share/pipewire/venv/bin/python3 --version
+~/.local/share/goldaudio/venv/bin/python3 --version
 
 # List installed packages
-~/.local/share/pipewire/venv/bin/pip list
+~/.local/share/goldaudio/venv/bin/pip list
 
 # Should include: Flask, gunicorn, Flask-Babel
 ```

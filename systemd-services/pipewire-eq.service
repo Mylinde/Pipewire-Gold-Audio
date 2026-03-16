@@ -5,7 +5,7 @@ Wants=pipewire.service
 
 [Service]
 Type=simple
-WorkingDirectory=$HOME/.local/share/pipewire
+WorkingDirectory=$HOME/.local/share/goldaudio
 
 # Start command
 ExecStart=/usr/bin/python3 -B -m gunicorn \

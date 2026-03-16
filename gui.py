@@ -24,8 +24,8 @@ app.secret_key = 'pipewire-eq-secret-key'
 create_babel(app)
 
 # Configuration
-BACKUP_DIR = os.path.expanduser("~/.local/share/pipewire/backups")
-BACKUP_LOCK_FILE = os.path.expanduser("~/.local/share/pipewire/backups/.backup_in_progress")
+BACKUP_DIR = os.path.expanduser("~/.local/share/goldaudio/backups")
+BACKUP_LOCK_FILE = os.path.expanduser("~/.local/share/goldaudio/backups/.backup_in_progress")
 MAX_BACKUPS = 10
 
 CONFIG_MAPPING = {
@@ -549,12 +549,17 @@ def get_translations():
         'Saving changes...': gettext('Saving changes...'),
         'Changes applied': gettext('Changes applied'),
         'Saving changes and restarting PipeWire...': gettext('Saving changes and restarting PipeWire...'),
-        'Reset all EQ values to default?': gettext('Reset all EQ values to default?'),
-        'Restore last backup?': gettext('Restore last backup?'),
+        'Reset all values to default (0 dB)?': gettext('Reset all values to default (0 dB)?'),
+        'Resetting all values...': gettext('Resetting all values...'),
+        'All values reset to default': gettext('All values reset to default'),
         'Preset loaded': gettext('Preset loaded'),
         'Restart PipeWire? (audio will be interrupted for ~2 seconds)': gettext('Restart PipeWire? (audio will be interrupted for ~2 seconds)'),
         'PipeWire restarted': gettext('PipeWire restarted'),
         'Restarting PipeWire...': gettext('Restarting PipeWire...'),
+        'No changes to save': gettext('No changes to save'),
+        'Backup in progress. Please wait before making changes.': gettext('Backup in progress. Please wait before making changes.'),
+        'Changes applied, PipeWire restarted': gettext('Changes applied, PipeWire restarted'),
+        'Error': gettext('Error'),
         
         # Backup/Undo Translations
         'Undo': gettext('Undo'),
