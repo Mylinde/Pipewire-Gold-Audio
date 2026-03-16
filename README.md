@@ -1,6 +1,6 @@
 # PipeWire Audio Configuration
 
-This project provides automated installation and configuration of PipeWire with multiple audio profiles including spatial audio (HeSuVi 5.1).
+This project provides automated installation and configuration of multiple audio profiles including spatial audio (HeSuVi 5.1) for PipeWire.
 
 ## 💡 Purpose
 
