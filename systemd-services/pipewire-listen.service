@@ -7,7 +7,7 @@ Wants=pipewire.service
 Type=simple
 ExecStart=/bin/bash -c "pw-mon | grep --line-buffered 'changed' | while read -r line; do \
 	STATUS=$(wpctl status); \
-	BACKUP_LOCK=\"$HOME/.local/share/pipewire/backups/.backup_in_progress\"; \
+	BACKUP_LOCK=\"$HOME/.local/share/goldaudio/backups/.backup_in_progress\"; \
 	if echo \"$STATUS\" | grep 'Audio:playback' && echo \"$STATUS\" | grep 'Pipewire Gold'; then \
 		systemctl --user start pipewire-eq.service; \
 	else \

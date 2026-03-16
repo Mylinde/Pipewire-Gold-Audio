@@ -14,6 +14,7 @@ let saveTimeout;
 let currentConfig = null;
 let configCheckInterval = null;
 let bands = [];  // Global bands reference
+let specialFilters = [];  // Global special filters reference
 
 function getBands() {
     return [
@@ -122,7 +123,7 @@ function renderEQ(bands) {
 function renderSpecialFilters() {
     // console.log('renderSpecialFilters() called, window.gettext available:', !!window.gettext);
     
-    const specialFilters = [
+    specialFilters = [
         { id: 'eq_hp', label: _('High-Pass Filter'),
           controls: [
             { param: 'freq', label: _('Frequency (Hz)'), min: 20, max: 200, step: 1, default: 65, format: 'Hz' },
@@ -513,11 +514,48 @@ async function applyChangesWithRestart() {
 }
 
 function resetAll() {
-    if (confirm(_('Restore last backup?'))) {
-        Object.assign(currentGains, originalGains);
-        renderEQ(getBands());
-        renderSpecialFilters();
-        applyChangesWithRestart();
+    if (confirm(_('Reset all values to default (0 dB)?'))) {
+        showStatus(_('Resetting all values...'), 'info');
+        
+        const data = {};
+        const currentBands = bands.length > 0 ? bands : getBands();
+        
+        // Set all bands to 0
+        currentBands.forEach(band => {
+            data[band.id] = 0;
+            data[`${band.id}_q`] = 1.0;
+            currentGains[band.id] = 0;
+            currentGains[`${band.id}_q`] = 1.0;
+        });
+        
+        // Reset special filters to defaults
+        specialFilters.forEach(filter => {
+            filter.controls.forEach(control => {
+                data[`${filter.id}_${control.param}`] = control.default;
+                currentGains[`${filter.id}_${control.param}`] = control.default;
+            });
+        });
+        
+        data['_backup'] = false;
+        data['_restart'] = true;
+        
+        fetch('/api/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(result => {
+            if (result.status === 'ok' || result.status === 'partial') {
+                showStatus(_('All values reset to default'), 'success');
+                Object.assign(originalGains, data);
+                renderEQ(getBands());
+                renderSpecialFilters();
+            } else {
+                showStatus(`${result.message}`, 'error');
+            }
+        })
+        .catch(error => showStatus(`Error: ${error.message}`, 'error'));
     }
 }
 
@@ -584,7 +622,14 @@ async function loadBackups() {
                 return;
             }
             
-            data.backups.forEach((backup, index) => {
+            // Sort backups by timestamp in descending order (newest first)
+            const sortedBackups = data.backups.slice().sort((b, a) => {
+                const dateA = new Date(a.timestamp);
+                const dateB = new Date(b.timestamp);
+                return dateB - dateA;
+            });
+            
+            sortedBackups.forEach((backup, index) => {
                 const backupEl = document.createElement('div');
                 backupEl.className = 'backup-item';
                 backupEl.innerHTML = `
