@@ -267,6 +267,19 @@ Factor = 10^(dB / 20)
 
 The project includes an interactive web-based EQ editor for real-time audio adjustments.
 
+### Screenshots
+
+<div style="display: flex; gap: 20px; justify-content: center;">
+  <div style="flex: 1; max-width: 45%;">
+    <h4>Light Theme</h4>
+    <img src="light_theme.png" alt="Light Theme Screenshot" style="width: 100%; border-radius: 8px;">
+  </div>
+  <div style="flex: 1; max-width: 45%;">
+    <h4>Dark Theme</h4>
+    <img src="dark_theme.png" alt="Dark Theme Screenshot" style="width: 100%; border-radius: 8px;">
+  </div>
+</div>
+
 ### Features
 
 - **Real-time EQ adjustments** with instant preview
