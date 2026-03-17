@@ -928,6 +928,6 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 ---
 
-**Last Updated:** 2026-03-16  
-**Version:** 1.0.2  
+**Last Updated:** 2026-03-17  
+**Version:** 1.0.3  
 **Status:** Stable ✅
