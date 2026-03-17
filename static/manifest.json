@@ -8,7 +8,7 @@
   "icons": [
     {
       "src": "/static/img/music_note.svg",
-      "sizes": "192x192",
+      "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     }

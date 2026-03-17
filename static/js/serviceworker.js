@@ -1,16 +1,30 @@
 const CACHE_NAME = "pipewire-eq-v1";
 const staticAssets = [
   "/",
-  "/static/css/main.css",
+  "/static/fonts/assistant-v19-latin-regular.woff2",
+  "/static/fonts/material-icons-round.woff2",
+  "/static/css/main.min.css",
   "/static/css/round.min.css",
-  "/static/js/main.js",
+  "/static/js/main.min.js",
   "/static/js/theme-toggler.min.js",
+  "/static/js/change-language.min.js",
+  "/static/img/music_note.svg"
 ];
 
-self.addEventListener("install", async (event) => {
+self.addEventListener("install", (event) => {
   console.log("[ServiceWorker] Installing...");
-  const cache = await caches.open(CACHE_NAME);
-  cache.addAll(staticAssets);
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const url of staticAssets) {
+        try {
+          await cache.add(url);
+          console.log(`[ServiceWorker] Cached: ${url}`);
+        } catch (error) {
+          console.error(`[ServiceWorker] Failed to cache: ${url}`, error);
+        }
+      }
+    })
+  );
   self.skipWaiting();
 });
 
@@ -34,8 +48,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
-  
-  // API calls must ALWAYS go to server - never cache API responses
+
   if (request.url.includes("/api/")) {
     event.respondWith(
       fetch(request).catch(() => {
@@ -47,31 +60,28 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
-  
-  // Cache-first strategy for static assets
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        return caches.match("/"); 
+      })
+    );
+    return;
+  }
+
   if (request.method === "GET") {
     event.respondWith(
       caches.match(request).then((cacheResponse) => {
-        // Return cached response if available
-        if (cacheResponse) {
-          return cacheResponse;
-        }
-        
-        // Fetch from network if not in cache
-        return fetch(request).then((response) => {
-          // Cache successful responses
+        return cacheResponse || fetch(request).then((response) => {
           if (response.status === 200) {
             const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
-            });
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
           }
           return response;
-        }).catch((error) => {
-          console.error("[ServiceWorker] Fetch failed:", error);
-          // Fallback to cached version or offline page
-          return caches.match("/") || new Response("Offline");
         });
+      }).catch(() => {
+          return caches.match("/static/img/music_note.svg");
       })
     );
   }
