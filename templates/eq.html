@@ -107,7 +107,7 @@
                 } finally {
                 
                     const script = document.createElement('script');
-                    script.src = "{{ url_for('static', filename='js/main.js') }}";
+                    script.src = "{{ url_for('static', filename='js/main.min.js') }}";
                     script.onload = function() {
                         console.log('✓ main.js loaded, initializing EQ...');
                     
@@ -127,7 +127,7 @@
         <script>
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register("{{ url_for('static', filename='js/serviceworker.js') }}")
+                    navigator.serviceWorker.register("{{ url_for('static', filename='js/serviceworker.min.js') }}")
                         .then(reg => console.log('✓ Service Worker registered'))
                         .catch(err => console.error('✗ Service Worker registration failed:', err));
                 });
@@ -135,6 +135,6 @@
         </script>    
         <!-- Non-critical scripts (async, non-blocking) -->
         <script async src="{{ url_for('static', filename='js/theme-toggler.min.js') }}"></script>
-        <script async src="{{ url_for('static', filename='js/change-language.js') }}"></script>
+        <script async src="{{ url_for('static', filename='js/change-language.min.js') }}"></script>
     </body>
 </html>
