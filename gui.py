@@ -238,6 +238,14 @@ def update_q(band, value, create_backup=True):
 def restart_pipewire():
     """Cleanly restart PipeWire service via socket trigger"""
     try:
+        # Pause playback before restart
+        subprocess.run(
+            ['playerctl', 'play-pause'],
+            capture_output=True,
+            timeout=5,
+            check=False
+        )
+        
         result = subprocess.run(
             ['systemctl', '--user', 'restart', 'pipewire.socket'],
             capture_output=True,
@@ -245,6 +253,14 @@ def restart_pipewire():
             check=False
         )
         time.sleep(2)
+        
+        # Resume playback after restart
+        subprocess.run(
+            ['playerctl', 'play-pause'],
+            capture_output=True,
+            timeout=5,
+            check=False
+        )
         
         return result.returncode == 0
     except Exception as e:
