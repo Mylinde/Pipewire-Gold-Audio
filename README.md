@@ -929,6 +929,6 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 ---
 
-**Last Updated:** 2026-03-17  
-**Version:** 1.0.3  
+**Last Updated:** 2026-03-24  
+**Version:** 1.0.4  
 **Status:** Stable ✅
