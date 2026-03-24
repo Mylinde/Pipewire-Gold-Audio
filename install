@@ -35,6 +35,24 @@ case "$1" in
     user)
         echo "=== PipeWire Installation for User ==="
         
+        # Check and install playerctl if not available
+        if ! command -v playerctl >/dev/null 2>&1; then
+            echo "Installing playerctl..."
+            if command -v apt >/dev/null 2>&1; then
+                "$ELEV" apt install -y playerctl
+            elif command -v pacman >/dev/null 2>&1; then
+                "$ELEV" pacman -S --noconfirm playerctl
+            elif command -v dnf >/dev/null 2>&1; then
+                "$ELEV" dnf install -y playerctl
+            elif command -v zypper >/dev/null 2>&1; then
+                "$ELEV" zypper install -y playerctl
+            else
+                echo "⚠ playerctl not found and package manager not recognized"
+                echo "  Please install playerctl manually: https://github.com/altdesktop/playerctl"
+            fi
+            echo "✓ playerctl installed"
+        fi
+        
         # Create directories
         mkdir -p ~/.config/pipewire/hesuvi
         mkdir -p ~/.config/pipewire/pipewire.conf.d
@@ -211,6 +229,27 @@ case "$1" in
             echo "Removing GUI installation..."
             rm -rf "$gui_dir"
             echo "✓ GUI and virtual environment removed"
+        fi
+        
+        # Ask about playerctl removal
+        if command -v playerctl >/dev/null 2>&1; then
+            echo ""
+            read -r -p "Should playerctl be uninstalled? [y/N] " response
+            if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+                echo "Removing playerctl..."
+                if command -v apt >/dev/null 2>&1; then
+                    "$ELEV" apt remove -y playerctl
+                elif command -v pacman >/dev/null 2>&1; then
+                    "$ELEV" pacman -R --noconfirm playerctl
+                elif command -v dnf >/dev/null 2>&1; then
+                    "$ELEV" dnf remove -y playerctl
+                elif command -v zypper >/dev/null 2>&1; then
+                    "$ELEV" zypper remove -y playerctl
+                fi
+                echo "✓ playerctl uninstalled"
+            else
+                echo "Keeping playerctl"
+            fi
         fi
         
         # Remove user installation

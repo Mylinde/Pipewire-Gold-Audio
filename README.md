@@ -58,6 +58,7 @@ This project provides automated installation and configuration of PipeWire with 
 
 - PipeWire installed and active
 - `wpctl` (Part of PipeWire)
+- `playerctl` (for audio playback control during restart)
 - `sudo` or `doas` for group management
 - Python 3.8+ (for GUI)
 - Flask (for GUI)
