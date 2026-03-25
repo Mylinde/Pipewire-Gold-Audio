@@ -5,14 +5,13 @@ Wants=pipewire.service
 
 [Service]
 Type=simple
-ExecStart=/bin/bash -c "pw-mon | grep --line-buffered 'changed' | while read -r line; do \
-	STATUS=$(wpctl status); \
-	BACKUP_LOCK=\"$HOME/.local/share/goldaudio/backups/.backup_in_progress\"; \
-	if echo \"$STATUS\" | grep 'Audio:playback' && echo \"$STATUS\" | grep 'Pipewire Gold'; then \
-		systemctl --user start pipewire-eq.service; \
+ExecStart=/bin/bash -c "BACKUP_LOCK=\"$HOME/.local/share/goldaudio/backups/.backup_in_progress\"; pw-mon 2>/dev/null | grep --line-buffered -E 'Pipewire Gold.*Audio:playback' | while read -r line; do \
+	STATUS=$(timeout 3 wpctl status 2>/dev/null || true); \
+	if grep -qE 'Pipewire Gold.*Audio:playback' <<< "$STATUS"; then \
+		systemctl --user is-active --quiet pipewire-eq.service || systemctl --user start pipewire-eq.service; \
 	else \
 		if [[ ! -f \"$BACKUP_LOCK\" ]]; then \
-			systemctl --user stop pipewire-eq.service; \
+			systemctl --user is-active --quiet pipewire-eq.service && systemctl --user stop pipewire-eq.service; \
 		fi; \
 	fi; \
 done"
@@ -22,7 +21,7 @@ RestartSec=5
 
 # Resource limits
 MemoryMax=32M
-CPUQuota=5%
+CPUQuota=3%
 Nice=15
 
 # Logging
