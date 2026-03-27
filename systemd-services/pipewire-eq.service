@@ -9,9 +9,9 @@ WorkingDirectory=$HOME/.local/share/goldaudio
 
 # Start command
 ExecStart=/usr/bin/python3 -B -m gunicorn \
-    --workers 2 \
+    --workers 1 \
     --worker-class gthread \
-    --threads 2 \
+    --threads 4 \
     --bind 127.0.0.1:1338 \
     --timeout 120 \
     gui:app
